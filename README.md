@@ -51,7 +51,6 @@ df <- read_ris(files)
 These functions began as a rewrite of
 [revtools](https://revtools.net) 0.4.1's read and write path, which loses data
 in ways that are hard to notice and impossible to reverse after the fact.
-revtools has been unmaintained since 2019.
 
 ### The multi-value delimiter
 
@@ -59,7 +58,7 @@ A bibliographic record routinely holds several values in one field: authors,
 keywords, JEL descriptors, ISSNs. Collapsing a record into one row of a data
 frame means joining them, and the join has to be reversible.
 
-revtools joined with `" and "`. That string occurs *inside* real values:
+revtools joined with `" and "`, which frequently occurs inside real values:
 
 | Value | What `" and "` splitting does |
 |---|---|
@@ -67,9 +66,8 @@ revtools joined with `" and "`. That string occurs *inside* real values:
 | `Journal of Economics and Statistics` | becomes two journals |
 | `Climate; Natural Disasters and Their Management; Global Warming [Q54]` | becomes two descriptors |
 
-`ristools` joins with `" | "`, which cannot occur in bibliographic text. That
-makes the join reversible for *every* field, so no field needs special
-handling and `ris_to_df()` / `df_to_ris()` are exact inverses.
+`ristools` joins with `" | "`, which generally does not occur in bibliographic text. That
+makes the join reversible for every field, allowing `ris_to_df()` and `df_to_ris()` to be exact inverses.
 
 The delimiter is available as `ris_sep()`. Always use it with `fixed = TRUE`:
 `|` is a regex metacharacter.
