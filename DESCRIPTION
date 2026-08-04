@@ -1,0 +1,22 @@
+Package: ristools
+Title: Faithful Reading and Writing of RIS and BibTeX Bibliographic Files
+Version: 0.1.0
+Authors@R:
+    person("Mark", "Engelbert", email = "mengelbert@3ieimpact.org",
+           role = c("aut", "cre"))
+Description: Reads and writes RIS, BibTeX, Medline and Web of Science
+    bibliographic files without the data loss that affects several existing
+    implementations. Multiple values in a single field (authors, keywords, JEL
+    descriptors, ISSNs) are joined with a delimiter that cannot occur in
+    bibliographic text, so the record-to-data-frame conversion is lossless and
+    reversible. Also preserves page-range order, trailing punctuation in
+    titles, and tags containing digits. Depends only on base R.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+Imports:
+    stats
+Suggests:
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
+Config/roxygen2/version: 8.0.0
