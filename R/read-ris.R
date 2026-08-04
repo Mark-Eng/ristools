@@ -156,7 +156,19 @@ read_ris_internal <- function(
         )
       }
     )
-    Encoding(z) <- "latin1"
+    # Strip a byte order mark, before Encoding() reinterprets its bytes as
+    # three latin1 characters and stops the first tag matching. Without this
+    # the opening record loses its tag, so prep_ris() sees one fewer record
+    # start than end. Affects every EBSCO export.
+    if (length(z) > 0) {
+      z[1] <- sub("^\xef\xbb\xbf", "", z[1], useBytes = TRUE)
+    }
+
+    # Mark the encoding rather than assuming latin1, which mojibakes every
+    # non-ASCII character of a UTF-8 file ("socio-economic" with a U+2010
+    # hyphen became "socioa€economic"). Ovid exports are pure ASCII, so the
+    # assumption was invisible there; EBSCO exports are UTF-8.
+    Encoding(z) <- if (isTRUE(all(validUTF8(z)))) "UTF-8" else "latin1"
     z <- gsub("<[[:alnum:]]{2}>", "", z) # remove errors from above process
 
     # detect whether file is bib-like or ris-like via the most common single

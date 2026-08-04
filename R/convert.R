@@ -77,9 +77,14 @@ ris_to_df <- function(x, delimiter = ris_sep()) {
     cols = cols
   )
 
+  # rbind() takes row names from the names of x_list and tries to translate
+  # them to the native encoding, warning once per record for a label like
+  # "Goncalves_2024_ES&P". Labels are captured below and the row names are
+  # discarded, so the names are dropped first.
+  labels <- names(x_list)
   x_dframe <- data.frame(
-    label = make.names(names(x_list), unique = TRUE),
-    do.call(rbind, x_list),
+    label = make.names(labels, unique = TRUE),
+    do.call(rbind, unname(x_list)),
     stringsAsFactors = FALSE
   )
   rownames(x_dframe) <- NULL

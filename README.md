@@ -89,6 +89,41 @@ On write, tags were built with `gsub("[[:digit:]]", "", tag)`, which turned
 `ristools` expands repeated values with `rep(names(a), lengths(a))` instead, so
 multi-value fields get one line per value and tags keep their digits.
 
+### Byte order marks and encoding
+
+Two further bugs made every EBSCO Discovery export either unreadable or
+silently corrupt. Both are fixed here.
+
+**A leading byte order mark broke the read entirely.** A BOM is three bytes
+(`EF BB BF`) before the first tag. revtools marks all imported text `latin1`,
+which turns those bytes into three visible characters, so the first tag stops
+matching the tag pattern under the `C` locale the reader sets. That record
+loses its opening tag, the parser then finds one fewer record start than record
+end, and the read fails with:
+
+```
+Error in data.frame(...) : arguments imply differing number of rows: 162, 163
+```
+
+**Non-ASCII text was mojibaked.** Because the encoding was hardcoded to
+`latin1` rather than detected, every multi-byte character in a UTF-8 file was
+reinterpreted byte by byte:
+
+| Raw file (UTF-8) | revtools 0.4.1 | `ristools` |
+|---|---|---|
+| `socio‐economic` | `socioâ€economic` | `socio‐economic` |
+| `Bandhan’s` | `Bandhanâ€™s` | `Bandhan’s` |
+| `“Graduation”` | `â€œGraduationâ€` | `“Graduation”` |
+| `Parienté` | `Parient<c3><a9>` → `Parient` | `Parienté` |
+
+The last row is the worst case: a follow-up `gsub("<[[:alnum:]]{2}>", "", ...)`
+deleted the mangled bytes outright, so accented names lost characters with no
+warning. `ristools` marks text UTF-8 when the file is valid UTF-8 and `latin1`
+otherwise, so both encodings read correctly.
+
+Ovid exports are pure ASCII, which is why neither bug is visible on EconLit or
+Medline files.
+
 ## Notes and caveats
 
 **`ED` is read as two fields.** The RIS tag table maps `ED` to both `editor`
