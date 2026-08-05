@@ -4,7 +4,9 @@ A set of R tools for reading and writing bibliographic files in RIS format. Unli
 
 `ristools` draws on the [revtools](https://github.com/mjwestgate/revtools) codebase and preserves some of its functions. Thanks to Martin Westgate for developing `revtools` and making the code available.
 
-Currently, `ristools`-specific functions are only implemented for `.ris` files. Functions for working with other bibliographic formats, including `.nbib` and `.ciw`, are currently carried over from `revtools`; full support for these file types under `ristools` is planned. 
+Currently, `ristools`-specific functions are only implemented for `.ris` files. Functions for working with other bibliographic formats, including `.nbib` and `.ciw`, are currently carried over from `revtools`; full support for these file types under `ristools` is planned.
+
+This package also includes a function to split large ris files into smaller chunks (default = 10,000 references) so they may be more easily imported to reference management/review software.
 
 ## Why this exists
 
@@ -124,6 +126,25 @@ M3  - Article
 ```
 
 The tag is filled forward across those lines. 
+
+### Splitting a large file
+
+Some reference management and review platforms cap the number of records they will accept per import. `split_ris_file()` breaks a large export into fixed-size chunks:
+
+```r
+split_ris_file("huge_export.ris", "chunks/", set_size = 10000)
+#> Wrote huge_export (1-10,000).ris
+#> Wrote huge_export (10,001-20,000).ris
+#> Wrote huge_export (20,001-23,412).ris
+```
+
+The output directory is created if it does not exist, and the paths written are returned invisibly, so they can be fed straight back to read_ris():
+`paths <- split_ris_file("huge_export.ris", "chunks/", set_size = 5000)`
+`df <- read_ris(paths)`
+
+Chunks are named after the input file with the record range appended. Any parenthesised suffix already on the input name is dropped first, so re-splitting an already-split file gives export (1-500).ris rather than export (1-1,000) (1-500).ris.
+
+Splitting works at the text level, not by parsing. Records are delimited by lines starting TY  -  and ER  -, and every line between them is copied verbatim. No field is read, mapped, or rewritten, so splitting cannot alter or lose data even in a file read_ris() would struggle with. The function stops rather than guessing if the file has no TY  -  lines, or if the TY/ER counts disagree — the latter usually means a truncated download or a record missing its terminator.
 
 ## Notes and caveats
 
