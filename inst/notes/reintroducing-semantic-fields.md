@@ -57,6 +57,22 @@ output.** 0.2.0 settled on two independent code paths sharing `prep_ris()`, and
 that decision should stand. `parse_ris_raw()` is the raw path and is now the
 only one; a semantic path should be a sibling of it.
 
+## One coupling that only shows up on a round trip
+
+`write_ris()` had `year_suffix = "//"` as the default for the Ovid dialect, with
+the comment "the reader strips the `//`". That was true only because
+`parse_ris_tags()` normalised a year to its 4 digits. With semantic parsing
+gone, the reader preserves values verbatim, so writing appended a suffix that
+the next read kept: `2024` → `2024//` → `2024////`. 0.3.0 changed the default to
+`""`, so a file writes back exactly as it was read; `year_suffix = "//"` still
+produces the Ovid form on request.
+
+The general point, worth checking for anything else reintroduced: **the writer
+had defaults that quietly assumed a normalising reader.** Any behaviour restored
+on the read side needs its write-side counterpart re-examined, and the check that
+catches it is a read → write → read comparison of field *values*, not column
+names. `tests/testthat/test-roundtrip.R` now pins this specific case.
+
 ## What `rename_columns = TRUE` guaranteed
 
 Pin a reintroduction against these, since they were the tested contract:
