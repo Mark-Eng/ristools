@@ -24,15 +24,19 @@ remotes::install_github("Mark-Eng/ristools")
 ```r
 library(ristools)
 
-# read a file; one column per raw tag, exactly as the file has it. Multi-value fields are joined with " | "
+# read a file; one column per raw tag, exactly as the file has it. 
+# Multi-value fields are joined with " | "
 df <- read_ris("econlit_export.ris")
 df$AU
-#> [1] "Smith, John A. | Jones and Partners, Mary B." or keep one list element per record, with proper vectors
+#> [1] "Smith, John A. | Jones and Partners, Mary B." or keep one 
+# list element per record, with proper vectors
 recs <- read_ris("econlit_export.ris", return_df = FALSE)
 recs[[1]]$AU
 #> [1] "Smith, John A."             "Jones and Partners, Mary B."
 
-# rename_columns = TRUE merges tags that often "mean" the same thing (e.g., "TI" and "T1") into one semantically-named field (author, title, year, ...), as in revtools.
+# rename_columns = TRUE merges tags that often "mean" the same thing 
+# (e.g., "TI" and "T1") into one semantically-named field (author, title, year, ...),
+# as in revtools.
 df2 <- read_ris("econlit_export.ris", rename_columns = TRUE)
 df2$author
 #> [1] "Smith, John A. | Jones and Partners, Mary B."

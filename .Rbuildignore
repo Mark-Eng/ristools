@@ -1,5 +1,8 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
+# GPL-3 is a standard R license, so DESCRIPTION's "License: GPL-3" is
+# sufficient and the package need not ship the text. LICENSE.md is kept in the
+# repository for GitHub's license display.
 ^LICENSE\.md$
 ^README\.Rmd$
 ^\.github$
