@@ -3,7 +3,7 @@ test_that("a BibTeX file survives read -> write -> read", {
   fb <- tempfile(fileext = ".bib")
   on.exit(unlink(c(f1, fb)))
 
-  df1 <- read_ris(f1)
+  df1 <- read_ris(f1, rename_columns = TRUE)
   write_ris(df1, fb, format = "bib")
   df2 <- read_ris(fb)
 

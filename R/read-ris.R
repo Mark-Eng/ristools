@@ -19,6 +19,12 @@
 #'   element per record, each a named list of fields.
 #' @param delimiter The string used to join multiple values in one field when
 #'   `return_df = TRUE`. Defaults to [ris_sep()].
+#' @param rename_columns If `FALSE` (the default), fields keep the raw tag
+#'   they were read under (`AU`, `TI`, `PY`, `KW`, …) — one column per tag,
+#'   exactly as the file has it, with no merging of tags that mean the same
+#'   thing. If `TRUE`, fields are renamed and merged into the semantic names
+#'   this package used by default before 0.2.0 (`author`, `title`, `year`,
+#'   `keywords`, …); see Details.
 #'
 #' @return A data frame, or a `ris_records` list if `return_df = FALSE`.
 #'
@@ -28,8 +34,21 @@
 #' RIS-like file containing a `PMID` tag is read as Medline; a `.ciw` file is
 #' read with Web of Science tags.
 #'
-#' This function differs from revtools' `read_bibliography()` in several ways
-#' that preserve data it discarded:
+#' **`rename_columns = FALSE` (the default)** keeps every field under the raw
+#' tag it was read from, so the output mirrors the input file as closely as
+#' possible: a record can be inspected, edited as a data frame, and written
+#' back out with [write_ris()] with nothing merged or renamed along the way.
+#' A tag that repeats within one record (two `AU` lines, several `KW` lines)
+#' becomes a vector under that one tag. Because the tag used for the same
+#' concept can differ by source (`author` is `AU` in an EconLit export but
+#' `A1` in an Ovid one), the column names of two files read this way can
+#' differ even when their content lines up conceptually. BibTeX input is
+#' unaffected by `rename_columns`, since its field names (`author`, `title`,
+#' …) are not RIS tags to begin with.
+#'
+#' **`rename_columns = TRUE`** restores the semantic renaming this package
+#' used by default before 0.2.0, differing from revtools' `read_bibliography()`
+#' in several ways that preserve data it discarded:
 #'
 #' * Multiple values in one field are joined with [ris_sep()], which is
 #'   reversible; `" and "` is not.
@@ -57,7 +76,10 @@
 #' ), f)
 #'
 #' df <- read_ris(f)
-#' df$author
+#' df$A1
+#'
+#' df2 <- read_ris(f, rename_columns = TRUE)
+#' df2$author
 #'
 #' unlink(f)
 #'
@@ -68,7 +90,8 @@
 read_ris <- function(
   filename,
   return_df = TRUE,
-  delimiter = ris_sep()
+  delimiter = ris_sep(),
+  rename_columns = FALSE
 ) {
   invisible(Sys.setlocale("LC_ALL", "C"))
   on.exit(invisible(Sys.setlocale("LC_ALL", "")))
@@ -84,11 +107,12 @@ read_ris <- function(
   if (length(filename) > 1) {
     result_list <- lapply(
       filename,
-      function(a, df, sep) {
-        read_ris_internal(a, df, sep)
+      function(a, df, sep, rename) {
+        read_ris_internal(a, df, sep, rename)
       },
       df = return_df,
-      sep = delimiter
+      sep = delimiter,
+      rename = rename_columns
     )
     names(result_list) <- filename
     if (return_df) {
@@ -112,7 +136,7 @@ read_ris <- function(
     }
   } else {
     return(
-      read_ris_internal(filename, return_df, delimiter)
+      read_ris_internal(filename, return_df, delimiter, rename_columns)
     )
   }
 }
@@ -122,7 +146,8 @@ read_ris <- function(
 read_ris_internal <- function(
   filename,
   return_df = TRUE,
-  delimiter = ris_sep()
+  delimiter = ris_sep(),
+  rename_columns = FALSE
 ) {
   if (grepl(".csv$", filename)) {
     result <- read_ris_csv(filename)
@@ -187,10 +212,15 @@ read_ris_internal <- function(
         tag_type <- "ris"
       }
       z_dframe <- prep_ris(z, detect_delimiter(zsub), tag_type)
-      if (any(z_dframe$ris == "PMID")) {
-        result <- read_medline(z_dframe)
+      is_medline <- any(z_dframe$ris == "PMID")
+      if (rename_columns) {
+        if (is_medline) {
+          result <- read_medline(z_dframe)
+        } else {
+          result <- parse_ris_tags(z_dframe, tag_type)
+        }
       } else {
-        result <- parse_ris_tags(z_dframe, tag_type)
+        result <- parse_ris_raw(z_dframe, tag_type, is_medline)
       }
     }
     if (return_df) {
@@ -801,6 +831,46 @@ parse_ris_tags <- function(x, tag_type = "ris") {
   })
 
   names(x_final) <- generate_ris_names(x_final)
+  class(x_final) <- "ris_records"
+  return(x_final)
+}
+
+
+# turn a prepped RIS/Medline/WoS data frame into a ris_records list, with no
+# renaming or merging: every distinct tag in a record becomes its own field,
+# under its own raw name, exactly as it appeared. A tag repeated within one
+# record (two AU lines, several KW lines) becomes a vector under that tag.
+#
+# This is deliberately a separate function from parse_ris_tags() rather than
+# a rename step applied to its output: several of that function's semantic
+# fields (author, journal, pages) are built by merging more than one tag's
+# values (SP + EP into one "419-41" pages string; the first journal-mapped tag
+# found wins "journal"), and once merged there is no way back to which tag
+# supplied which part. Reversing that merge would need the same winner/loser
+# bookkeeping that created it, for no benefit over never merging at all.
+parse_ris_raw <- function(x, tag_type = "ris", is_medline = FALSE) {
+  x_split <- split(x[c("ris", "text", "row_order")], x$ref)
+  x_final <- lapply(x_split, function(a) {
+    result <- split(a$text, a$ris)
+    # fields are ordered by first appearance in the record, matching
+    # parse_ris_tags()'s ordering
+    entry_order <- a$row_order[match(names(result), a$ris)]
+    result[order(entry_order)]
+  })
+
+  # record labels still need "the" author/year/journal (or, for Medline, the
+  # PMID), which only the semantic parse can reliably pick (e.g. preferring AU
+  # over a less-frequent A1, or the first-occurring journal tag rather than
+  # whichever the lookup table happens to list first) -- so labels are
+  # generated from a throwaway semantic parse, discarding everything except
+  # the name it produces. The data returned to the caller is untouched by
+  # this.
+  names(x_final) <- if (is_medline) {
+    vapply(x_final, function(a) a$PMID[1], character(1))
+  } else {
+    generate_ris_names(parse_ris_tags(x, tag_type))
+  }
+
   class(x_final) <- "ris_records"
   return(x_final)
 }

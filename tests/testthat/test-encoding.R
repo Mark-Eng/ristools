@@ -38,7 +38,7 @@ test_that("a BOM does not end up in the first field's value", {
   f <- write_bytes(paste0("﻿", utf8_record))
   on.exit(unlink(f))
 
-  df <- read_ris(f)
+  df <- read_ris(f, rename_columns = TRUE)
   expect_equal(df$type, "JOUR")
   expect_false(grepl("﻿", df$type, fixed = TRUE))
 })
@@ -71,7 +71,7 @@ test_that("UTF-8 text is not mojibaked", {
   f <- write_bytes(utf8_record)
   on.exit(unlink(f))
 
-  df <- read_ris(f)
+  df <- read_ris(f, rename_columns = TRUE)
 
   expect_true(grepl("socio‐economic", df$title, fixed = TRUE))
   # the classic mojibake signature: "a" + euro sign
@@ -82,7 +82,7 @@ test_that("accented author names survive", {
   f <- write_bytes(utf8_record)
   on.exit(unlink(f))
 
-  recs <- read_ris(f, return_df = FALSE)
+  recs <- read_ris(f, return_df = FALSE, rename_columns = TRUE)
   authors <- recs[[1]]$author
 
   expect_length(authors, 3)
@@ -103,7 +103,7 @@ test_that("latin1 files still read correctly", {
   f <- write_bytes(latin1_bytes)
   on.exit(unlink(f))
 
-  df <- read_ris(f)
+  df <- read_ris(f, rename_columns = TRUE)
   expect_equal(nrow(df), 1)
   expect_true(grepl("Café", df$title))
 })
@@ -123,9 +123,9 @@ test_that("non-ASCII text survives a full round trip", {
   f2 <- tempfile(fileext = ".ris")
   on.exit(unlink(c(f1, f2)))
 
-  d1 <- read_ris(f1)
+  d1 <- read_ris(f1, rename_columns = TRUE)
   write_ris(d1, f2)
-  d2 <- read_ris(f2)
+  d2 <- read_ris(f2, rename_columns = TRUE)
 
   expect_equal(d1$title, d2$title)
   expect_equal(d1$author, d2$author)

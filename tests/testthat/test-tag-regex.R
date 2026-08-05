@@ -10,7 +10,7 @@ test_that("a wrapped keyword field keeps every keyword, in order", {
   f <- write_temp_ris(wrapped_kw_ris())
   on.exit(unlink(f))
 
-  recs <- read_ris(f, return_df = FALSE)
+  recs <- read_ris(f, return_df = FALSE, rename_columns = TRUE)
 
   expect_equal(recs[[1]]$keywords, wrapped_kw_expected())
 })
@@ -21,7 +21,7 @@ test_that("a keyword whose first word looks like a tag is not truncated", {
   f <- write_temp_ris(wrapped_kw_ris())
   on.exit(unlink(f))
 
-  recs <- read_ris(f, return_df = FALSE)
+  recs <- read_ris(f, return_df = FALSE, rename_columns = TRUE)
 
   expect_true("E7 economies" %in% recs[[1]]$keywords)
   expect_false("economies" %in% recs[[1]]$keywords)
@@ -33,7 +33,7 @@ test_that("a keyword that is entirely tag-like is not dropped", {
   f <- write_temp_ris(wrapped_kw_ris())
   on.exit(unlink(f))
 
-  recs <- read_ris(f, return_df = FALSE)
+  recs <- read_ris(f, return_df = FALSE, rename_columns = TRUE)
 
   expect_true(all(c("EKC", "GHG") %in% recs[[1]]$keywords))
 })
@@ -43,7 +43,7 @@ test_that("a JEL code keyword is not split into a tag and a digit", {
   f <- write_temp_ris(wrapped_kw_ris())
   on.exit(unlink(f))
 
-  recs <- read_ris(f, return_df = FALSE)
+  recs <- read_ris(f, return_df = FALSE, rename_columns = TRUE)
 
   expect_true(all(c("F34", "Q54") %in% recs[[1]]$keywords))
   expect_false("4" %in% recs[[1]]$keywords)
@@ -53,7 +53,7 @@ test_that("a wrapped keyword field creates no spurious fields", {
   f <- write_temp_ris(wrapped_kw_ris())
   on.exit(unlink(f))
 
-  recs <- read_ris(f, return_df = FALSE)
+  recs <- read_ris(f, return_df = FALSE, rename_columns = TRUE)
 
   expect_false(any(c("E7", "EKC", "GHG", "F3", "Q5") %in% names(recs[[1]])))
 })
@@ -63,7 +63,7 @@ test_that("a wrapped abstract keeps a tag-like continuation line", {
   f <- write_temp_ris(wrapped_kw_ris())
   on.exit(unlink(f))
 
-  recs <- read_ris(f, return_df = FALSE)
+  recs <- read_ris(f, return_df = FALSE, rename_columns = TRUE)
 
   expect_equal(
     recs[[1]]$abstract,
@@ -76,7 +76,7 @@ test_that("wrapped fields survive the data frame conversion", {
   f <- write_temp_ris(wrapped_kw_ris())
   on.exit(unlink(f))
 
-  df <- read_ris(f)
+  df <- read_ris(f, rename_columns = TRUE)
 
   expect_equal(
     df$keywords,
@@ -90,9 +90,9 @@ test_that("wrapped keywords round-trip through write_ris", {
   f2 <- tempfile(fileext = ".ris")
   on.exit(unlink(c(f1, f2)))
 
-  df1 <- read_ris(f1)
+  df1 <- read_ris(f1, rename_columns = TRUE)
   write_ris(df1, f2)
-  df2 <- read_ris(f2)
+  df2 <- read_ris(f2, rename_columns = TRUE)
 
   expect_equal(df2$keywords, df1$keywords)
 })
@@ -102,7 +102,7 @@ test_that("a well-formed file parses exactly as before", {
   f <- write_temp_ris(awkward_ris())
   on.exit(unlink(f))
 
-  recs <- read_ris(f, return_df = FALSE)
+  recs <- read_ris(f, return_df = FALSE, rename_columns = TRUE)
 
   expect_equal(
     recs[[1]]$author,
@@ -126,7 +126,7 @@ test_that("a tag containing a digit still matches", {
   ))
   on.exit(unlink(f))
 
-  recs <- read_ris(f, return_df = FALSE)
+  recs <- read_ris(f, return_df = FALSE, rename_columns = TRUE)
 
   expect_equal(recs[[1]]$year, "n.d.")
   expect_equal(recs[[1]]$eppi_id, "12345")
@@ -151,7 +151,7 @@ test_that("a bare 'ER  -' with no trailing space ends a record", {
   ))
   on.exit(unlink(f))
 
-  df <- read_ris(f)
+  df <- read_ris(f, rename_columns = TRUE)
 
   expect_equal(nrow(df), 2)
   expect_equal(df$title, c("First record", "Second record"))
@@ -163,7 +163,7 @@ test_that("a Web of Science .ciw file still parses", {
   f <- write_temp_ris(wos_ciw(), ext = ".ciw")
   on.exit(unlink(f))
 
-  df <- read_ris(f)
+  df <- read_ris(f, rename_columns = TRUE)
 
   expect_equal(nrow(df), 1)
   expect_equal(df$title, "A record in Web of Science format")

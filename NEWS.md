@@ -1,3 +1,41 @@
+# ristools 0.2.0
+
+## Breaking change
+
+`read_ris()` now defaults to `rename_columns = FALSE`: every field is named
+after the raw tag it was read under (`AU`, `TI`, `PY`, `KW`, …), one column per
+tag, with no renaming or merging of tags that mean the same thing. A tag
+repeated within one record (two `AU` lines, several `KW` lines) becomes a
+vector under that one tag, exactly as `author` already did. This makes the
+default output mirror the input file as closely as possible: a record can be
+read, inspected as a data frame, and written back out with [write_ris()] with
+nothing merged or relabelled along the way.
+
+Previously, several tags that carry the same meaning were folded into one
+semantic field regardless of source: `author` from `AU` or `A1`; `journal`
+from the first of `JO`/`T2`/`T3`/`SO`/`JT`/`JF`/`JA` found (others already kept
+their own tag); `pages` from `SP`/`BP` merged with `EP` into one
+`"419-41"`-style string. None of this can be reliably reversed after the
+merge — a file mixing `KW` and `DE` (both mapped to `keywords`) had no record
+of which value came from which tag once they were concatenated. Rather than
+add a lossy rename step, `read_ris()` now has two independent parse paths: the
+new default builds columns straight from the raw tags, and `rename_columns =
+TRUE` calls the same semantic parser as every previous release, unchanged --
+existing code that depends on `author`/`title`/`year`/`journal`/`pages`/… keeps
+working by adding `rename_columns = TRUE`.
+
+Because the tag used for a given concept differs by source, column names now
+vary with the input file: an Ovid export's authors are read into a column
+named `A1`, an EconLit export's into `AU`. `pages` is no longer produced at
+all under the default; `SP` (or `BP`) and `EP` are separate columns holding
+their own unmodified values, and an end-page-only record has no `SP` column.
+
+Applies to RIS, Medline, and Web of Science input alike, each using its own
+raw tags. BibTeX (`.bib`) input is unaffected either way, since its field
+names (`author=`, `title=`, …) are not RIS tags to begin with.
+`write_ris()` needed no changes: it already writes any tag-shaped column
+through unchanged, so raw-tag columns round-trip with no special handling.
+
 # ristools 0.1.2
 
 ## Bug fixes

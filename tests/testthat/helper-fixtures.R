@@ -101,6 +101,44 @@ wos_ciw <- function() {
   )
 }
 
+# the same record as awkward_ris(), tagged EconLit-style (AU/TI/PY/JO) rather
+# than Ovid-style (A1/T1/Y1/JF), so the two can be compared to show that raw
+# tag output follows the source file's own tags rather than a fixed schema
+econlit_ris <- function() {
+  c(
+    "TY  - JOUR",
+    "TI  - Adaptation in the U.S.",
+    "AU  - Smith, John A.",
+    "AU  - Jones and Partners, Mary B.",
+    "PY  - 2020",
+    "AB  - An abstract about climate and growth.",
+    "JO  - Journal of Economics and Statistics",
+    "VL  - 12",
+    "IS  - 3",
+    "SP  - 419",
+    "EP  - 41",
+    "DO  - 10.1111/joes.12345",
+    "ER  - ",
+    ""
+  )
+}
+
+# a record whose KW block mixes two different tags mapped to the same
+# semantic field ("keywords" = KW or DE), to verify both survive as distinct
+# raw-tag columns rather than merging
+mixed_kw_de_ris <- function() {
+  c(
+    "TY  - JOUR",
+    "T1  - Mixed keyword tags",
+    "A1  - Green, Robin",
+    "Y1  - 2022//",
+    "KW  - alpha",
+    "DE  - beta",
+    "ER  - ",
+    ""
+  )
+}
+
 # write lines to a temp .ris file and return the path
 write_temp_ris <- function(lines, ext = ".ris") {
   f <- tempfile(fileext = ext)

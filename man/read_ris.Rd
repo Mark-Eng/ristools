@@ -4,7 +4,12 @@
 \alias{read_ris}
 \title{Read a RIS, BibTeX, Medline or Web of Science file}
 \usage{
-read_ris(filename, return_df = TRUE, delimiter = ris_sep())
+read_ris(
+  filename,
+  return_df = TRUE,
+  delimiter = ris_sep(),
+  rename_columns = FALSE
+)
 }
 \arguments{
 \item{filename}{Path to a file, or a character vector of paths. Multiple
@@ -17,6 +22,13 @@ element per record, each a named list of fields.}
 
 \item{delimiter}{The string used to join multiple values in one field when
 \code{return_df = TRUE}. Defaults to \code{\link[=ris_sep]{ris_sep()}}.}
+
+\item{rename_columns}{If \code{FALSE} (the default), fields keep the raw tag
+they were read under (\code{AU}, \code{TI}, \code{PY}, \code{KW}, …) — one column per tag,
+exactly as the file has it, with no merging of tags that mean the same
+thing. If \code{TRUE}, fields are renamed and merged into the semantic names
+this package used by default before 0.2.0 (\code{author}, \code{title}, \code{year},
+\code{keywords}, …); see Details.}
 }
 \value{
 A data frame, or a \code{ris_records} list if \code{return_df = FALSE}.
@@ -31,8 +43,21 @@ Format detection is by content, not extension: a file with more \verb{\{} than
 RIS-like file containing a \code{PMID} tag is read as Medline; a \code{.ciw} file is
 read with Web of Science tags.
 
-This function differs from revtools' \code{read_bibliography()} in several ways
-that preserve data it discarded:
+\strong{\code{rename_columns = FALSE} (the default)} keeps every field under the raw
+tag it was read from, so the output mirrors the input file as closely as
+possible: a record can be inspected, edited as a data frame, and written
+back out with \code{\link[=write_ris]{write_ris()}} with nothing merged or renamed along the way.
+A tag that repeats within one record (two \code{AU} lines, several \code{KW} lines)
+becomes a vector under that one tag. Because the tag used for the same
+concept can differ by source (\code{author} is \code{AU} in an EconLit export but
+\code{A1} in an Ovid one), the column names of two files read this way can
+differ even when their content lines up conceptually. BibTeX input is
+unaffected by \code{rename_columns}, since its field names (\code{author}, \code{title},
+…) are not RIS tags to begin with.
+
+\strong{\code{rename_columns = TRUE}} restores the semantic renaming this package
+used by default before 0.2.0, differing from revtools' \code{read_bibliography()}
+in several ways that preserve data it discarded:
 \itemize{
 \item Multiple values in one field are joined with \code{\link[=ris_sep]{ris_sep()}}, which is
 reversible; \code{" and "} is not.
@@ -61,7 +86,10 @@ writeLines(c(
 ), f)
 
 df <- read_ris(f)
-df$author
+df$A1
+
+df2 <- read_ris(f, rename_columns = TRUE)
+df2$author
 
 unlink(f)
 

@@ -4,10 +4,10 @@ test_that("a record with no abstract does not gain an empty one", {
   f <- write_temp_ris(sparse_ris())
   on.exit(unlink(f))
 
-  recs <- read_ris(f, return_df = FALSE)
+  recs <- read_ris(f, return_df = FALSE, rename_columns = TRUE)
   expect_null(recs[[1]]$abstract)
 
-  df <- read_ris(f)
+  df <- read_ris(f, rename_columns = TRUE)
   expect_true(is.na(df$abstract) || !("abstract" %in% colnames(df)))
 })
 
@@ -15,7 +15,7 @@ test_that("an end page with no start page is distinguishable", {
   f <- write_temp_ris(sparse_ris())
   on.exit(unlink(f))
 
-  df <- read_ris(f)
+  df <- read_ris(f, rename_columns = TRUE)
 
   # a leading dash is the only way to tell "-218" from a start page of 218
   expect_equal(df$pages, "-218")
@@ -26,9 +26,9 @@ test_that("an end-page-only value round-trips", {
   f2 <- tempfile(fileext = ".ris")
   on.exit(unlink(c(f1, f2)))
 
-  df1 <- read_ris(f1)
+  df1 <- read_ris(f1, rename_columns = TRUE)
   write_ris(df1, f2)
-  df2 <- read_ris(f2)
+  df2 <- read_ris(f2, rename_columns = TRUE)
 
   expect_equal(df2$pages, "-218")
   # the file itself carries a bare EP, with the dash reconstructed on read
@@ -46,7 +46,7 @@ test_that("a year with no 4-digit year is kept rather than blanked", {
   ))
   on.exit(unlink(f))
 
-  recs <- read_ris(f, return_df = FALSE)
+  recs <- read_ris(f, return_df = FALSE, rename_columns = TRUE)
 
   expect_equal(recs[[1]]$year, "n.d.")
 })
@@ -63,7 +63,7 @@ test_that("a single-value page field is kept", {
   ))
   on.exit(unlink(f))
 
-  df <- read_ris(f)
+  df <- read_ris(f, rename_columns = TRUE)
   expect_equal(df$pages, "77")
 
   f2 <- tempfile(fileext = ".ris")
@@ -85,7 +85,7 @@ test_that("where several tags map to journal, extras keep their own tag", {
   ))
   on.exit(unlink(f))
 
-  recs <- read_ris(f, return_df = FALSE)
+  recs <- read_ris(f, return_df = FALSE, rename_columns = TRUE)
 
   expect_equal(recs[[1]]$journal, "Journal of Things")
   # the T3 value keeps its tag rather than being pasted into the journal

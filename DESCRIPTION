@@ -1,6 +1,6 @@
 Package: ristools
 Title: Faithful Reading and Writing of RIS and BibTeX Bibliographic Files
-Version: 0.1.2
+Version: 0.2.0
 Authors@R:
     person("Mark", "Engelbert", email = "mengelbert@3ieimpact.org",
            role = c("aut", "cre"))
@@ -11,7 +11,7 @@ Description: Reads and writes RIS, BibTeX, Medline and Web of Science
     bibliographic text, so the record-to-data-frame conversion is lossless and
     reversible. Also preserves page-range order, trailing punctuation in
     titles, and tags containing digits. Depends only on base R.
-License: MIT + file LICENSE
+License: GPL-3
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 Imports:

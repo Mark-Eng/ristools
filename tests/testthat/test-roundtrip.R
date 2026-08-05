@@ -2,13 +2,13 @@ test_that("a RIS file survives read -> write -> read unchanged", {
   f1 <- write_temp_ris(c(awkward_ris(), sparse_ris()))
   on.exit(unlink(f1), add = TRUE)
 
-  df1 <- read_ris(f1)
+  df1 <- read_ris(f1, rename_columns = TRUE)
 
   f2 <- tempfile(fileext = ".ris")
   on.exit(unlink(f2), add = TRUE)
   write_ris(df1, f2)
 
-  df2 <- read_ris(f2)
+  df2 <- read_ris(f2, rename_columns = TRUE)
 
   # every field present in both must be identical; label is regenerated from
   # author/year/journal so it is compared separately
@@ -23,7 +23,7 @@ test_that("an author containing ' and ' is not split", {
   f <- write_temp_ris(awkward_ris())
   on.exit(unlink(f))
 
-  recs <- read_ris(f, return_df = FALSE)
+  recs <- read_ris(f, return_df = FALSE, rename_columns = TRUE)
 
   expect_length(recs[[1]]$author, 2)
   expect_equal(recs[[1]]$author[2], "Jones and Partners, Mary B.")
@@ -46,7 +46,7 @@ test_that("an abbreviated end page is not reordered", {
   f <- write_temp_ris(awkward_ris())
   on.exit(unlink(f))
 
-  df <- read_ris(f)
+  df <- read_ris(f, rename_columns = TRUE)
 
   # sort() would have produced "41-419"
   expect_equal(df$pages[1], "419-41")
@@ -56,7 +56,7 @@ test_that("a trailing full stop in a title is kept", {
   f <- write_temp_ris(awkward_ris())
   on.exit(unlink(f))
 
-  df <- read_ris(f)
+  df <- read_ris(f, rename_columns = TRUE)
 
   expect_equal(df$title[1], "Adaptation in the U.S.")
 })
