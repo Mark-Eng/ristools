@@ -49,8 +49,10 @@ tag as the field name, so position carries no meaning and this would
 relabel a correct \code{journal}. Only set this for records from a reader that
 discards the source tag.}
 
-\item{year_suffix}{Appended to bare 4-digit years. Defaults to \code{"//"} for
-the Ovid dialect and \code{""} otherwise.}
+\item{year_suffix}{Appended to bare 4-digit \code{Y1}/\code{PY} values. Defaults to
+\code{""}, which writes the year exactly as given, so a file read by
+\code{\link[=read_ris]{read_ris()}} writes back unchanged. Pass \code{"//"} for the \code{"2020//"} form
+that Ovid exports use.}
 
 \item{blank_line}{If \code{TRUE}, add an empty line after each \code{ER}.}
 

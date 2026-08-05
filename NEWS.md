@@ -1,3 +1,69 @@
+# ristools 0.3.0
+
+This release narrows the package to what it is for: reading and writing RIS
+files without losing anything. Everything that existed to serve semantic field
+renaming, or to read formats other than RIS and BibTeX, is gone. That is about a
+third of the code.
+
+If you need any of it back, read
+`inst/notes/reintroducing-semantic-fields.md` first — it records why each piece
+worked the way it did, which parts were already broken, and where the traps are.
+
+## Breaking changes
+
+* **No `label` column.** `read_ris()` and `ris_to_df()` return one column per
+  RIS tag in the input and nothing else. Previously a `label` column held a
+  generated `Smith_2020_JEco`-style name. Records in the list form
+  (`return_df = FALSE`) are still named, but positionally: `ref_1`, `ref_2`, ….
+  Building a label from `author`/`year`/`journal` required a full semantic parse
+  of the file, which is the reason it is gone. To name records yourself, add a
+  `label` column before calling [df_to_ris()].
+
+* **`rename_columns` is removed.** The raw-tag output introduced in 0.2.0 is now
+  the only behaviour. Code passing `rename_columns = TRUE` must be rewritten to
+  use raw tags (`df$TI` or `df$T1` rather than `df$title`). The argument may
+  return in a later version, working differently.
+
+* **Medline (`.nbib`) and Web of Science (`.ciw`) reading is removed.** Both now
+  raise an error naming the format rather than being misparsed. Medline reading
+  was in fact already unreachable — a `PMID` tag is four characters and could
+  never match the RIS tag pattern, so the code had never run on a real file.
+
+* **CSV reading is removed.** `read_ris_csv()` is gone. It was undocumented by
+  tests, and its main job was synthesising the `label` column and *guessing* an
+  author delimiter from column-wide heuristics — the kind of silent inference
+  this package exists to avoid. Use `utils::read.csv()`.
+
+* **`filename` now holds the bare file name.** On a multi-file read the
+  `filename` column records `export.ris` rather than the full path it was
+  called with. Pass `full_path = TRUE` for the old behaviour. Reading files of
+  the same name from different directories warns, because the column can no
+  longer identify the source; it is not silently de-duplicated.
+
+* **A file with no `ER` record terminator is rejected.** Fallbacks that treated
+  a blank line, or a line of one repeated character, as a record separator are
+  gone. Both were untested, and the repeated-character test was itself broken
+  (`length(a > 6)` is a line's character count, not a repeat count), so such a
+  file was parsed into something arbitrary rather than refused.
+
+* **`ris_tag_lookup()` takes no arguments.** The `medline`, `wos` and
+  `ris_write` tables are gone with the formats they served. What remains is the
+  RIS table, as user-facing reference data: the answer to "what does `M3` mean?"
+  Nothing in the reader consults it, since columns are named from the file
+  itself. The two inherited typos (`pubmed_central_identitfier`,
+  `wos_cagegories`) went with the deleted tables.
+
+## Bug fixes
+
+* Column order now follows the order fields first appear. Names shorter than
+  three characters were previously moved to the end, which was meant to keep raw
+  tags behind semantic ones but also reordered any record with a field name of
+  three or more characters: `list(TY, ABCD, T1)` came back as `ABCD, TY, T1`.
+
+* A multi-file read no longer leaves the source path in the data frame's row
+  names. `rbind()` inherited them from the per-file frames, so every row was
+  named after the file it came from; the `label` column had been masking this.
+
 # ristools 0.2.0
 
 ## Breaking change

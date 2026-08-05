@@ -1,41 +1,38 @@
-test_that("a record with no abstract does not gain an empty one", {
+test_that("a field absent from the file gains no column", {
   # revtools tested length(result$abstract > 1), which is always 1, so every
   # record without an abstract had an empty one added
   f <- write_temp_ris(sparse_ris())
   on.exit(unlink(f))
 
-  recs <- read_ris(f, return_df = FALSE, rename_columns = TRUE)
-  expect_null(recs[[1]]$abstract)
+  recs <- read_ris(f, return_df = FALSE)
+  expect_null(recs[[1]]$N2)
+  expect_null(recs[[1]]$AB)
 
-  df <- read_ris(f, rename_columns = TRUE)
-  expect_true(is.na(df$abstract) || !("abstract" %in% colnames(df)))
+  df <- read_ris(f)
+  expect_false(any(c("N2", "AB") %in% colnames(df)))
 })
 
-test_that("an end page with no start page is distinguishable", {
-  f <- write_temp_ris(sparse_ris())
-  on.exit(unlink(f))
-
-  df <- read_ris(f, rename_columns = TRUE)
-
-  # a leading dash is the only way to tell "-218" from a start page of 218
-  expect_equal(df$pages, "-218")
-})
-
-test_that("an end-page-only value round-trips", {
+test_that("an end page with no start page keeps its own tag", {
   f1 <- write_temp_ris(sparse_ris())
   f2 <- tempfile(fileext = ".ris")
   on.exit(unlink(c(f1, f2)))
 
-  df1 <- read_ris(f1, rename_columns = TRUE)
-  write_ris(df1, f2)
-  df2 <- read_ris(f2, rename_columns = TRUE)
+  df1 <- read_ris(f1)
 
-  expect_equal(df2$pages, "-218")
-  # the file itself carries a bare EP, with the dash reconstructed on read
+  # the tag itself distinguishes an end page from a start page, so no
+  # leading-dash convention is needed to tell "218" from a start page of 218
+  expect_equal(df1$EP, "218")
+  expect_false("SP" %in% colnames(df1))
+
+  write_ris(df1, f2)
   expect_true(any(grepl("^EP  - 218", readLines(f2))))
+
+  df2 <- read_ris(f2)
+  expect_equal(df2$EP, "218")
+  expect_false("SP" %in% colnames(df2))
 })
 
-test_that("a year with no 4-digit year is kept rather than blanked", {
+test_that("a year value with no 4-digit year is kept rather than blanked", {
   f <- write_temp_ris(c(
     "TY  - JOUR",
     "T1  - Undated work",
@@ -46,12 +43,12 @@ test_that("a year with no 4-digit year is kept rather than blanked", {
   ))
   on.exit(unlink(f))
 
-  recs <- read_ris(f, return_df = FALSE, rename_columns = TRUE)
+  recs <- read_ris(f, return_df = FALSE)
 
-  expect_equal(recs[[1]]$year, "n.d.")
+  expect_equal(recs[[1]]$Y1, "n.d.")
 })
 
-test_that("a single-value page field is kept", {
+test_that("a lone start page survives a round trip", {
   f <- write_temp_ris(c(
     "TY  - JOUR",
     "T1  - One page only",
@@ -63,8 +60,9 @@ test_that("a single-value page field is kept", {
   ))
   on.exit(unlink(f))
 
-  df <- read_ris(f, rename_columns = TRUE)
-  expect_equal(df$pages, "77")
+  df <- read_ris(f)
+  expect_equal(df$SP, "77")
+  expect_false("EP" %in% colnames(df))
 
   f2 <- tempfile(fileext = ".ris")
   on.exit(unlink(f2), add = TRUE)
@@ -72,7 +70,7 @@ test_that("a single-value page field is kept", {
   expect_true(any(grepl("^SP  - 77", readLines(f2))))
 })
 
-test_that("where several tags map to journal, extras keep their own tag", {
+test_that("two tags that describe the same thing stay separate", {
   f <- write_temp_ris(c(
     "TY  - JOUR",
     "T1  - A chapter",
@@ -85,12 +83,11 @@ test_that("where several tags map to journal, extras keep their own tag", {
   ))
   on.exit(unlink(f))
 
-  recs <- read_ris(f, return_df = FALSE, rename_columns = TRUE)
+  recs <- read_ris(f, return_df = FALSE)
 
-  expect_equal(recs[[1]]$journal, "Journal of Things")
-  # the T3 value keeps its tag rather than being pasted into the journal
+  # neither value is folded into the other, and neither loses its tag
+  expect_equal(recs[[1]]$JF, "Journal of Things")
   expect_equal(recs[[1]]$T3, "A Series Title")
-  expect_false("journal_secondary" %in% names(recs[[1]]))
 })
 
 test_that("a missing file raises an error", {

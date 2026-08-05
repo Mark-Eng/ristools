@@ -6,10 +6,10 @@ test_that("every multi-value field is joined with the delimiter", {
   f <- write_temp_ris(awkward_ris())
   on.exit(unlink(f))
 
-  df <- read_ris(f, rename_columns = TRUE)
+  df <- read_ris(f)
 
-  # author, M3 and issn all held several values in the source file
-  for (fld in c("author", "M3", "issn")) {
+  # A1, M3 and SN all held several values in the source file
+  for (fld in c("A1", "M3", "SN")) {
     expect_true(
       grepl(ris_sep(), df[[fld]][1], fixed = TRUE),
       info = paste("field:", fld)

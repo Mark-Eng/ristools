@@ -7,8 +7,8 @@
 df_to_ris(x, delimiter = ris_sep())
 }
 \arguments{
-\item{x}{A data frame with one row per record. A \code{label} column, if
-present, supplies the names of the result and is not treated as a field.}
+\item{x}{A data frame with one row per record. A \code{label} column, if you have
+added one, supplies the names of the result and is not treated as a field.}
 
 \item{delimiter}{The string on which to split multi-value fields. Defaults
 to \code{\link[=ris_sep]{ris_sep()}}. Split with \code{fixed = TRUE}, so this is a literal string
@@ -23,26 +23,27 @@ Splits a data frame of records into a \code{ris_records} list, splitting
 multi-value fields on \code{delimiter}.
 }
 \details{
-\emph{Every} field is split, not just \code{author} and \code{keywords}. This is safe
-because the default delimiter cannot occur in bibliographic text, so a value
-containing it can only have been joined by \code{\link[=ris_to_df]{ris_to_df()}}, and no field needs
-special handling.
+\emph{Every} field is split, not just the ones that usually hold several values.
+This is safe because the default delimiter cannot occur in bibliographic
+text, so a value containing it can only have been joined by \code{\link[=ris_to_df]{ris_to_df()}},
+and no field needs special handling.
 
 Columns for which a record has no value are dropped rather than kept as
-\code{NA}, so \code{is.null(x[[i]]$abstract)} means what it says.
+\code{NA}, so \code{is.null(x[[i]]$AB)} means what it says.
 
-If \code{x} has no \code{label} column, records are named \code{ref_1}, \code{ref_2}, … via
-\code{\link[=ris_index]{ris_index()}}.
+\code{\link[=read_ris]{read_ris()}} does not produce a \code{label} column, so records are normally named
+\code{ref_1}, \code{ref_2}, … via \code{\link[=ris_index]{ris_index()}}. Adding a \code{label} column yourself is
+the way to name them something else.
 }
 \examples{
 df <- data.frame(
-  label = "ref_1",
-  title = "A study",
-  author = "Smith, J. | Jones, A.",
+  TY = "JOUR",
+  TI = "A study",
+  AU = "Smith, J. | Jones, A.",
   stringsAsFactors = FALSE
 )
 recs <- df_to_ris(df)
-recs$ref_1$author
+recs$ref_1$AU
 
 }
 \seealso{

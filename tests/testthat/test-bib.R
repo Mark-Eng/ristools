@@ -3,12 +3,15 @@ test_that("a BibTeX file survives read -> write -> read", {
   fb <- tempfile(fileext = ".bib")
   on.exit(unlink(c(f1, fb)))
 
-  df1 <- read_ris(f1, rename_columns = TRUE)
+  # A RIS read names its columns after the file's own tags, and writing as
+  # BibTeX uses those names as the BibTeX field names, so the tags survive the
+  # round trip rather than being translated to author/title/year.
+  df1 <- read_ris(f1)
   write_ris(df1, fb, format = "bib")
   df2 <- read_ris(fb)
 
   expect_equal(nrow(df2), nrow(df1))
-  for (cl in c("title", "author", "year", "journal")) {
+  for (cl in c("T1", "A1", "Y1", "JF")) {
     expect_equal(df2[[cl]], df1[[cl]], info = paste("field:", cl))
   }
 })
