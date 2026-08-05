@@ -15,21 +15,21 @@ them apart again.
 }
 \details{
 Bibliographic records routinely hold several values in one field: authors,
-keywords, JEL descriptors, ISSNs. Collapsing a record into one row of a
-data frame means joining those values, and the join has to be reversible.
+keywords, JEL descriptors, ISSNs. \code{\link[=ris_to_df]{ris_to_df()}} joins those values with this
+string when collapsing a record into one row, and \code{\link[=df_to_ris]{df_to_ris()}} splits them
+apart again.
 
-\code{" and "} -- the conventional choice, and what revtools used -- is not
-reversible, because it occurs inside real values: author strings
-(\code{"Jones and Partners, Mary B."}), journal titles (\code{"Journal of Economics and Statistics"}), and EconLit descriptors such as \code{"Climate; Natural Disasters and Their Management; Global Warming [Q54]"}. Splitting on it
-corrupts those values, and no amount of lookahead fixes the general case.
+\code{" | "} is used because it does not occur in bibliographic text, so \emph{every}
+field can be split on it unconditionally, no field needs special handling,
+and the round trip is exact. The conventional \code{" and "} is not safe: it
+appears inside real author names (\code{"Jones and Partners, Mary B."}), journal
+titles (\code{"Journal of Economics and Statistics"}), and descriptors such as
+\code{"Climate; Natural Disasters and Their Management; Global Warming [Q54]"},
+all of which splitting would corrupt.
 
-\code{" | "} cannot occur in bibliographic text, so \emph{every} field can be split
-on it unconditionally and no field needs special handling. This is what
-makes the data frame to record conversion lossless.
-
-Always use this with \code{fixed = TRUE} in \code{\link[=strsplit]{strsplit()}}, \code{\link[=grepl]{grepl()}} and friends:
-\code{|} is a regex metacharacter, and a pattern of \code{" | "} without \code{fixed}
-matches something else entirely.
+\code{|} is a regex metacharacter, so always pass \code{fixed = TRUE} when using this
+string as a pattern in \code{\link[=strsplit]{strsplit()}}, \code{\link[=grepl]{grepl()}} and friends. Without it the
+pattern matches something else entirely.
 }
 \examples{
 ris_sep()

@@ -55,24 +55,24 @@ differ even when their content lines up conceptually. BibTeX input is
 unaffected by \code{rename_columns}, since its field names (\code{author}, \code{title},
 …) are not RIS tags to begin with.
 
-\strong{\code{rename_columns = TRUE}} restores the semantic renaming this package
-used by default before 0.2.0, differing from revtools' \code{read_bibliography()}
-in several ways that preserve data it discarded:
+\strong{\code{rename_columns = TRUE}} merges tags that carry the same meaning into a
+single semantically named column:
 \itemize{
-\item Multiple values in one field are joined with \code{\link[=ris_sep]{ris_sep()}}, which is
-reversible; \code{" and "} is not.
-\item Page ranges take their order from the tag (\code{SP}/\code{BP} before \code{EP}) rather
-than from \code{sort()}, which reversed ranges with an abbreviated end page
-(\code{"419"} + \code{"41"} became \code{"41-419"}). An end page with no start page is
-stored as \code{"-218"}.
-\item Trailing full stops in titles are kept, so titles ending \code{"U.S."} or
-\code{"D.C."} no longer lose their last character.
-\item Where several tags map to \code{journal}, the first supplies it and the others
-keep their own tag as a field name, rather than being pasted together.
-\item Records with no abstract no longer get an empty one.
-\item Tags containing a digit (\code{M3}, \code{Y2}, \code{U1}) keep their case.
-\item A \code{year} value with no 4-digit year is kept rather than blanked.
+\item \code{author} from whichever of \code{AU}/\code{A1}/\code{A2}/… occurs most often in the file;
+any other author tag keeps its own name.
+\item \code{journal} from the first of \code{JO}/\code{T2}/\code{T3}/\code{SO}/\code{JT}/\code{JF}/\code{JA} present;
+the others again keep their own names.
+\item \code{pages} from \code{SP}/\code{BP} and \code{EP} joined as \code{"419-41"}. An end page with no
+start page becomes \code{"-218"}.
+\item \code{year}, \code{title}, \code{keywords}, \code{abstract}, \code{doi}, \code{issn} and the rest from
+the mapping \code{\link[=ris_tag_lookup]{ris_tag_lookup()}} returns.
 }
+
+This is useful when combining files from several sources, where the same
+concept arrives under a different tag in each. Note that the merge is not
+reversible: once two tags become one column, \code{\link[=write_ris]{write_ris()}} cannot tell which
+value came from which, so a file read this way and written back out may not
+use the tags it came in with.
 }
 \examples{
 f <- tempfile(fileext = ".ris")

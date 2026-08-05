@@ -42,11 +42,12 @@ is a literal string rather than a regular expression.}
 order. If \code{FALSE}, fields keep the order they have in \code{x}.}
 
 \item{journal_from_position}{If \code{TRUE}, a \code{journal} field appearing before
-the author/year block is written as \code{T3} rather than \code{JF}, recovering
-series and volume titles. Defaults to \code{FALSE}: this is only correct for
-records produced by revtools' reader. \code{\link[=read_ris]{read_ris()}} keeps the original tag
-as the field name instead, so on its output this would relabel a correct
-\code{journal}.}
+the author/year block is written as \code{T3} rather than \code{JF}, on the
+assumption that it holds a series or volume title. Defaults to \code{FALSE},
+which is correct for \code{\link[=read_ris]{read_ris()}} output: that reader keeps the original
+tag as the field name, so position carries no meaning and this would
+relabel a correct \code{journal}. Only set this for records from a reader that
+discards the source tag.}
 
 \item{year_suffix}{Appended to bare 4-digit years. Defaults to \code{"//"} for
 the Ovid dialect and \code{""} otherwise.}
@@ -62,17 +63,17 @@ The filename, invisibly.
 Writes a data frame or \code{ris_records} object out as RIS or BibTeX.
 }
 \details{
-Relative to revtools' \code{write_bibliography()}:
-\itemize{
-\item Tags are no longer stripped of digits, so \code{M3} and \code{Y2} survive rather
-than becoming \code{M} and \code{Y} and being dropped.
-\item Fields with no entry in the tag map are passed through if the field name
-is itself a RIS tag; anything genuinely unwritable raises one warning
-naming the fields.
-\item \code{issue} is mapped, single-value and non-numeric page fields are kept, and
-records are written with \code{TY} first and \code{ER} last.
-\item RIS is written with CRLF line endings and no quoting.
-}
+Each record is written as a \code{TY} line, then its fields, then \code{ER}. Fields
+are mapped to tags by \code{dialect}, or by \code{tag_map} where given. A field
+holding several values becomes one line per value, repeating the tag.
+
+A field with no entry in the tag map is written under its own name if that
+name is already a RIS tag, which is what lets the raw-tag output of
+\code{\link[=read_ris]{read_ris()}} round-trip unchanged. Anything genuinely unwritable is dropped
+with one warning naming the fields. The \code{label} and \code{filename} columns that
+\code{\link[=read_ris]{read_ris()}} adds are not written.
+
+RIS output uses CRLF line endings and no quoting, as RIS consumers expect.
 }
 \examples{
 df <- data.frame(

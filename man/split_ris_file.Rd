@@ -12,8 +12,8 @@ split_ris_file(input_file, output_dir, set_size = 10000)
 \item{output_dir}{Directory to write the chunks to. Created if it does not
 exist.}
 
-\item{set_size}{Maximum number of records per output file. Defaults to
-10000.}
+\item{set_size}{Maximum number of records -- not lines -- per output file.
+Defaults to 10000.}
 }
 \value{
 A character vector of the paths written, invisibly.

@@ -263,11 +263,12 @@ entry_to_ris <- function(
 #' @param order_tags If `TRUE` (the default), tags are written in a canonical
 #'   order. If `FALSE`, fields keep the order they have in `x`.
 #' @param journal_from_position If `TRUE`, a `journal` field appearing before
-#'   the author/year block is written as `T3` rather than `JF`, recovering
-#'   series and volume titles. Defaults to `FALSE`: this is only correct for
-#'   records produced by revtools' reader. [read_ris()] keeps the original tag
-#'   as the field name instead, so on its output this would relabel a correct
-#'   `journal`.
+#'   the author/year block is written as `T3` rather than `JF`, on the
+#'   assumption that it holds a series or volume title. Defaults to `FALSE`,
+#'   which is correct for [read_ris()] output: that reader keeps the original
+#'   tag as the field name, so position carries no meaning and this would
+#'   relabel a correct `journal`. Only set this for records from a reader that
+#'   discards the source tag.
 #' @param year_suffix Appended to bare 4-digit years. Defaults to `"//"` for
 #'   the Ovid dialect and `""` otherwise.
 #' @param blank_line If `TRUE`, add an empty line after each `ER`.
@@ -276,16 +277,17 @@ entry_to_ris <- function(
 #' @return The filename, invisibly.
 #'
 #' @details
-#' Relative to revtools' `write_bibliography()`:
+#' Each record is written as a `TY` line, then its fields, then `ER`. Fields
+#' are mapped to tags by `dialect`, or by `tag_map` where given. A field
+#' holding several values becomes one line per value, repeating the tag.
 #'
-#' * Tags are no longer stripped of digits, so `M3` and `Y2` survive rather
-#'   than becoming `M` and `Y` and being dropped.
-#' * Fields with no entry in the tag map are passed through if the field name
-#'   is itself a RIS tag; anything genuinely unwritable raises one warning
-#'   naming the fields.
-#' * `issue` is mapped, single-value and non-numeric page fields are kept, and
-#'   records are written with `TY` first and `ER` last.
-#' * RIS is written with CRLF line endings and no quoting.
+#' A field with no entry in the tag map is written under its own name if that
+#' name is already a RIS tag, which is what lets the raw-tag output of
+#' [read_ris()] round-trip unchanged. Anything genuinely unwritable is dropped
+#' with one warning naming the fields. The `label` and `filename` columns that
+#' [read_ris()] adds are not written.
+#'
+#' RIS output uses CRLF line endings and no quoting, as RIS consumers expect.
 #'
 #' @examples
 #' df <- data.frame(

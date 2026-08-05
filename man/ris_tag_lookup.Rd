@@ -12,17 +12,19 @@ ris_tag_lookup(type = c("ris", "ris_write", "medline", "wos"))
 }
 \value{
 A data frame with columns \code{ris} (the tag) and \code{bib} (the field
-name). For \code{type = "ris"} only, a third integer column \code{order} gives the
-canonical position of each field within a record.
+name). Several tags may share a field name: those are the ones
+\code{read_ris(rename_columns = TRUE)} merges. For \code{type = "ris"} only, a third
+integer column \code{order} gives the canonical position of each field within a
+record, which is the order \code{\link[=write_ris]{write_ris()}} writes tags in.
 
 Note that \code{type = "ris"} contains the tag \code{ED} twice, mapped to both
-\code{editor} and \code{edition}; this is inherited from revtools and means every
-\code{ED} line in a file is read as two fields.
+\code{editor} and \code{edition}, so every \code{ED} line in a file is read as two
+fields. See the notes in \code{README.md}.
 }
 \description{
-Returns the tag-to-field mapping used when parsing a file of the given
-type. Mostly of internal interest, but exported so a caller can inspect or
-extend the mapping.
+Returns the tag-to-field mapping used when parsing a file of the given type.
+Useful for checking which field a tag is read as, and which tags
+\code{read_ris(rename_columns = TRUE)} merges into one column.
 }
 \examples{
 head(ris_tag_lookup("ris"))

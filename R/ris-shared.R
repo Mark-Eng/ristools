@@ -9,23 +9,21 @@
 #'
 #' @details
 #' Bibliographic records routinely hold several values in one field: authors,
-#' keywords, JEL descriptors, ISSNs. Collapsing a record into one row of a
-#' data frame means joining those values, and the join has to be reversible.
+#' keywords, JEL descriptors, ISSNs. [ris_to_df()] joins those values with this
+#' string when collapsing a record into one row, and [df_to_ris()] splits them
+#' apart again.
 #'
-#' `" and "` -- the conventional choice, and what revtools used -- is not
-#' reversible, because it occurs inside real values: author strings
-#' (`"Jones and Partners, Mary B."`), journal titles (`"Journal of Economics
-#' and Statistics"`), and EconLit descriptors such as `"Climate; Natural
-#' Disasters and Their Management; Global Warming [Q54]"`. Splitting on it
-#' corrupts those values, and no amount of lookahead fixes the general case.
+#' `" | "` is used because it does not occur in bibliographic text, so *every*
+#' field can be split on it unconditionally, no field needs special handling,
+#' and the round trip is exact. The conventional `" and "` is not safe: it
+#' appears inside real author names (`"Jones and Partners, Mary B."`), journal
+#' titles (`"Journal of Economics and Statistics"`), and descriptors such as
+#' `"Climate; Natural Disasters and Their Management; Global Warming [Q54]"`,
+#' all of which splitting would corrupt.
 #'
-#' `" | "` cannot occur in bibliographic text, so *every* field can be split
-#' on it unconditionally and no field needs special handling. This is what
-#' makes the data frame to record conversion lossless.
-#'
-#' Always use this with `fixed = TRUE` in [strsplit()], [grepl()] and friends:
-#' `|` is a regex metacharacter, and a pattern of `" | "` without `fixed`
-#' matches something else entirely.
+#' `|` is a regex metacharacter, so always pass `fixed = TRUE` when using this
+#' string as a pattern in [strsplit()], [grepl()] and friends. Without it the
+#' pattern matches something else entirely.
 #'
 #' @return A length-1 character vector, `" | "`.
 #'
@@ -43,15 +41,17 @@ ris_sep <- function() {
 
 #' Generate sequential record labels
 #'
-#' Builds zero-padded index labels for records that cannot be given a
-#' meaningful name from their author and year.
+#' Builds numbered labels such as `ref_01`, `ref_02`. Used to name records
+#' where no author/year label can be built, and available for labelling records
+#' yourself.
 #'
 #' @param string Prefix for each label. Defaults to `"V"`.
 #' @param n Number of labels to generate. If a vector is supplied, its length
 #'   is used.
 #' @param sep Separator between prefix and number. Defaults to `"_"`.
 #'
-#' @return A character vector of `n` labels.
+#' @return A character vector of `n` labels, zero-padded to a common width so
+#'   they sort in order.
 #'
 #' @examples
 #' ris_index("ref", 3)

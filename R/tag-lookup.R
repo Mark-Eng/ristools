@@ -235,20 +235,22 @@ ris_tag_definitions <- function() {
 
 #' Look up the field name for each tag of a bibliographic format
 #'
-#' Returns the tag-to-field mapping used when parsing a file of the given
-#' type. Mostly of internal interest, but exported so a caller can inspect or
-#' extend the mapping.
+#' Returns the tag-to-field mapping used when parsing a file of the given type.
+#' Useful for checking which field a tag is read as, and which tags
+#' `read_ris(rename_columns = TRUE)` merges into one column.
 #'
 #' @param type One of `"ris"` (the default), `"ris_write"`, `"medline"` or
 #'   `"wos"`.
 #'
 #' @return A data frame with columns `ris` (the tag) and `bib` (the field
-#'   name). For `type = "ris"` only, a third integer column `order` gives the
-#'   canonical position of each field within a record.
+#'   name). Several tags may share a field name: those are the ones
+#'   `read_ris(rename_columns = TRUE)` merges. For `type = "ris"` only, a third
+#'   integer column `order` gives the canonical position of each field within a
+#'   record, which is the order [write_ris()] writes tags in.
 #'
 #'   Note that `type = "ris"` contains the tag `ED` twice, mapped to both
-#'   `editor` and `edition`; this is inherited from revtools and means every
-#'   `ED` line in a file is read as two fields.
+#'   `editor` and `edition`, so every `ED` line in a file is read as two
+#'   fields. See the notes in `README.md`.
 #'
 #' @examples
 #' head(ris_tag_lookup("ris"))

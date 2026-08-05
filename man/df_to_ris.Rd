@@ -23,13 +23,16 @@ Splits a data frame of records into a \code{ris_records} list, splitting
 multi-value fields on \code{delimiter}.
 }
 \details{
-\emph{Every} field is split, not just \code{author} and \code{keywords}. Because the
-default delimiter cannot occur in bibliographic text, a value containing it
-can only have been produced by \code{\link[=ris_to_df]{ris_to_df()}}, so splitting unconditionally
-is safe and no field needs special handling.
+\emph{Every} field is split, not just \code{author} and \code{keywords}. This is safe
+because the default delimiter cannot occur in bibliographic text, so a value
+containing it can only have been joined by \code{\link[=ris_to_df]{ris_to_df()}}, and no field needs
+special handling.
 
 Columns for which a record has no value are dropped rather than kept as
 \code{NA}, so \code{is.null(x[[i]]$abstract)} means what it says.
+
+If \code{x} has no \code{label} column, records are named \code{ref_1}, \code{ref_2}, … via
+\code{\link[=ris_index]{ris_index()}}.
 }
 \examples{
 df <- data.frame(

@@ -21,10 +21,13 @@
 #'   found anywhere in `x`. Records lacking a field get `NA`.
 #'
 #' @details
-#' The conversion is lossless and is reversed exactly by [df_to_ris()],
-#' because the default delimiter cannot occur in bibliographic text. Fields
-#' whose names are short (fewer than 3 characters, i.e. raw RIS tags) are
-#' placed after the named fields.
+#' The round trip through [df_to_ris()] is exact as long as `delimiter` does
+#' not occur in the data, which is why [ris_sep()] is the default. A custom
+#' delimiter that appears inside a real value will not split back correctly.
+#'
+#' Columns appear in the order fields are first seen across `x`, except that
+#' where a mix of tag-named and semantically named fields is present, the
+#' tag-named ones are placed last.
 #'
 #' @examples
 #' recs <- structure(
@@ -108,13 +111,16 @@ ris_to_df <- function(x, delimiter = ris_sep()) {
 #'   each a named list of fields.
 #'
 #' @details
-#' *Every* field is split, not just `author` and `keywords`. Because the
-#' default delimiter cannot occur in bibliographic text, a value containing it
-#' can only have been produced by [ris_to_df()], so splitting unconditionally
-#' is safe and no field needs special handling.
+#' *Every* field is split, not just `author` and `keywords`. This is safe
+#' because the default delimiter cannot occur in bibliographic text, so a value
+#' containing it can only have been joined by [ris_to_df()], and no field needs
+#' special handling.
 #'
 #' Columns for which a record has no value are dropped rather than kept as
 #' `NA`, so `is.null(x[[i]]$abstract)` means what it says.
+#'
+#' If `x` has no `label` column, records are named `ref_1`, `ref_2`, … via
+#' [ris_index()].
 #'
 #' @examples
 #' df <- data.frame(

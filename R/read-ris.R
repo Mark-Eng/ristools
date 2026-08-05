@@ -46,23 +46,23 @@
 #' unaffected by `rename_columns`, since its field names (`author`, `title`,
 #' …) are not RIS tags to begin with.
 #'
-#' **`rename_columns = TRUE`** restores the semantic renaming this package
-#' used by default before 0.2.0, differing from revtools' `read_bibliography()`
-#' in several ways that preserve data it discarded:
+#' **`rename_columns = TRUE`** merges tags that carry the same meaning into a
+#' single semantically named column:
 #'
-#' * Multiple values in one field are joined with [ris_sep()], which is
-#'   reversible; `" and "` is not.
-#' * Page ranges take their order from the tag (`SP`/`BP` before `EP`) rather
-#'   than from `sort()`, which reversed ranges with an abbreviated end page
-#'   (`"419"` + `"41"` became `"41-419"`). An end page with no start page is
-#'   stored as `"-218"`.
-#' * Trailing full stops in titles are kept, so titles ending `"U.S."` or
-#'   `"D.C."` no longer lose their last character.
-#' * Where several tags map to `journal`, the first supplies it and the others
-#'   keep their own tag as a field name, rather than being pasted together.
-#' * Records with no abstract no longer get an empty one.
-#' * Tags containing a digit (`M3`, `Y2`, `U1`) keep their case.
-#' * A `year` value with no 4-digit year is kept rather than blanked.
+#' * `author` from whichever of `AU`/`A1`/`A2`/… occurs most often in the file;
+#'   any other author tag keeps its own name.
+#' * `journal` from the first of `JO`/`T2`/`T3`/`SO`/`JT`/`JF`/`JA` present;
+#'   the others again keep their own names.
+#' * `pages` from `SP`/`BP` and `EP` joined as `"419-41"`. An end page with no
+#'   start page becomes `"-218"`.
+#' * `year`, `title`, `keywords`, `abstract`, `doi`, `issn` and the rest from
+#'   the mapping [ris_tag_lookup()] returns.
+#'
+#' This is useful when combining files from several sources, where the same
+#' concept arrives under a different tag in each. Note that the merge is not
+#' reversible: once two tags become one column, [write_ris()] cannot tell which
+#' value came from which, so a file read this way and written back out may not
+#' use the tags it came in with.
 #'
 #' @examples
 #' f <- tempfile(fileext = ".ris")
@@ -233,12 +233,50 @@ read_ris_internal <- function(
 
 #' Read a CSV-format bibliography
 #'
-#' Reads a csv of records, cleans its column names, and adds a `label` column
-#' if the first column does not already look like one.
+#' Reads a csv of records into a data frame, cleaning its column names to match
+#' the conventions the rest of the package uses.
 #'
 #' @param filename Path to a csv file.
 #'
-#' @return A data frame.
+#' @return A data frame with one row per record.
+#'
+#' @details
+#' Column names are lower-cased and stripped of punctuation, except names that
+#' are already RIS tags, which keep their case.
+#'
+#' A `label` column is added unless the first column is already called `label`,
+#' or can serve as one: the existing first column is left in place as the
+#' record identifier if its values are unique and it is not named `author`,
+#' `title`, `year` or `journal`. Otherwise sequential labels come from
+#' [ris_index()].
+#'
+#' An `author` column is normalised to use [ris_sep()] between names, so that a
+#' csv agrees with files read by [read_ris()]. The separator is inferred for the
+#' column as a whole rather than row by row: if *every* value uses `" and "`,
+#' `" AND "` or `" & "`, those are replaced; otherwise commas followed by a word
+#' of two or more letters are treated as the separator. A column that already
+#' uses the delimiter throughout is left untouched. Other multi-value fields are
+#' expected to use the delimiter already.
+#'
+#' @examples
+#' f <- tempfile(fileext = ".csv")
+#' write.csv(
+#'   data.frame(
+#'     title = c("A study", "Another study"),
+#'     author = c("Smith, J. and Jones, A.", "Black, K. and White, L."),
+#'     year = c(2020, 2021)
+#'   ),
+#'   f,
+#'   row.names = FALSE
+#' )
+#'
+#' df <- read_ris_csv(f)
+#' df$label
+#' df$author
+#'
+#' unlink(f)
+#'
+#' @seealso [read_ris()] for RIS, BibTeX, Medline and Web of Science files.
 #'
 #' @export
 read_ris_csv <- function(filename) {

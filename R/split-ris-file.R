@@ -11,8 +11,8 @@
 #' @param input_file Path to the RIS file to split.
 #' @param output_dir Directory to write the chunks to. Created if it does not
 #'   exist.
-#' @param set_size Maximum number of records per output file. Defaults to
-#'   10000.
+#' @param set_size Maximum number of records -- not lines -- per output file.
+#'   Defaults to 10000.
 #'
 #' @return A character vector of the paths written, invisibly.
 #'

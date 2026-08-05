@@ -10,9 +10,49 @@ read_ris_csv(filename)
 \item{filename}{Path to a csv file.}
 }
 \value{
-A data frame.
+A data frame with one row per record.
 }
 \description{
-Reads a csv of records, cleans its column names, and adds a \code{label} column
-if the first column does not already look like one.
+Reads a csv of records into a data frame, cleaning its column names to match
+the conventions the rest of the package uses.
+}
+\details{
+Column names are lower-cased and stripped of punctuation, except names that
+are already RIS tags, which keep their case.
+
+A \code{label} column is added unless the first column is already called \code{label},
+or can serve as one: the existing first column is left in place as the
+record identifier if its values are unique and it is not named \code{author},
+\code{title}, \code{year} or \code{journal}. Otherwise sequential labels come from
+\code{\link[=ris_index]{ris_index()}}.
+
+An \code{author} column is normalised to use \code{\link[=ris_sep]{ris_sep()}} between names, so that a
+csv agrees with files read by \code{\link[=read_ris]{read_ris()}}. The separator is inferred for the
+column as a whole rather than row by row: if \emph{every} value uses \code{" and "},
+\code{" AND "} or \code{" & "}, those are replaced; otherwise commas followed by a word
+of two or more letters are treated as the separator. A column that already
+uses the delimiter throughout is left untouched. Other multi-value fields are
+expected to use the delimiter already.
+}
+\examples{
+f <- tempfile(fileext = ".csv")
+write.csv(
+  data.frame(
+    title = c("A study", "Another study"),
+    author = c("Smith, J. and Jones, A.", "Black, K. and White, L."),
+    year = c(2020, 2021)
+  ),
+  f,
+  row.names = FALSE
+)
+
+df <- read_ris_csv(f)
+df$label
+df$author
+
+unlink(f)
+
+}
+\seealso{
+\code{\link[=read_ris]{read_ris()}} for RIS, BibTeX, Medline and Web of Science files.
 }

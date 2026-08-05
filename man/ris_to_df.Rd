@@ -22,10 +22,13 @@ Collapses a \code{ris_records} list into a data frame with one row per record,
 joining multi-value fields with \code{delimiter}.
 }
 \details{
-The conversion is lossless and is reversed exactly by \code{\link[=df_to_ris]{df_to_ris()}},
-because the default delimiter cannot occur in bibliographic text. Fields
-whose names are short (fewer than 3 characters, i.e. raw RIS tags) are
-placed after the named fields.
+The round trip through \code{\link[=df_to_ris]{df_to_ris()}} is exact as long as \code{delimiter} does
+not occur in the data, which is why \code{\link[=ris_sep]{ris_sep()}} is the default. A custom
+delimiter that appears inside a real value will not split back correctly.
+
+Columns appear in the order fields are first seen across \code{x}, except that
+where a mix of tag-named and semantically named fields is present, the
+tag-named ones are placed last.
 }
 \examples{
 recs <- structure(

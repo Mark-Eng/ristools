@@ -15,11 +15,13 @@ is used.}
 \item{sep}{Separator between prefix and number. Defaults to \code{"_"}.}
 }
 \value{
-A character vector of \code{n} labels.
+A character vector of \code{n} labels, zero-padded to a common width so
+they sort in order.
 }
 \description{
-Builds zero-padded index labels for records that cannot be given a
-meaningful name from their author and year.
+Builds numbered labels such as \code{ref_01}, \code{ref_02}. Used to name records
+where no author/year label can be built, and available for labelling records
+yourself.
 }
 \examples{
 ris_index("ref", 3)
