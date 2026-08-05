@@ -1,6 +1,6 @@
 Package: ristools
 Title: Faithful Reading and Writing of RIS and BibTeX Bibliographic Files
-Version: 0.1.1
+Version: 0.1.2
 Authors@R:
     person("Mark", "Engelbert", email = "mengelbert@3ieimpact.org",
            role = c("aut", "cre"))

@@ -1,3 +1,33 @@
+# ristools 0.1.2
+
+## Bug fixes
+
+* Keywords were silently lost, truncated or misfiled when a RIS file broke a
+  multi-value field across several lines without repeating the tag, as every
+  EBSCO export does. The tag pattern made the `  - ` separator
+  optional, so a continuation line whose first word looked like a tag was
+  parsed as one, in two distinct ways:
+
+  - A line with text after the tag-like word was truncated and misfiled.
+    `E7 economies` became tag `E7` with text `economies`, so the keyword lost
+    its first word and went into a bogus `E7` field; the following keyword
+    lines then inherited `E7` from the tag fill-forward. JEL codes broke the
+    same way, `F34` splitting into `F3` and `4`.
+  - A line that was entirely tag-like left no text at all and was removed by
+    the empty-row filter. `EKC` and `GHG` disappeared without warning.
+
+  The read never failed, so a file with 60
+  spurious columns still looked like a successful import. RIS tags are always
+  two characters -- a capital followed by a capital or a digit -- then two
+  spaces and a hyphen, and requiring that separator is enough on its own to
+  tell a tag from a keyword. No list of known tags is needed.
+
+  Ovid exports are unaffected, because they repeat the tag on every
+  value. Web of Science `.ciw` files use a different tag form entirely (a bare
+  single space and no hyphen, as in `AU Smith, J`), so they keep the original
+  permissive pattern, selected by file type. The same dispatch is where support
+  for other dialects, such as `.nbib` and its `PMID- ` tags, would go.
+
 # ristools 0.1.1
 
 ## Bug fixes

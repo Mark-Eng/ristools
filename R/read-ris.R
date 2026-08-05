@@ -186,7 +186,7 @@ read_ris_internal <- function(
       } else {
         tag_type <- "ris"
       }
-      z_dframe <- prep_ris(z, detect_delimiter(zsub))
+      z_dframe <- prep_ris(z, detect_delimiter(zsub), tag_type)
       if (any(z_dframe$ris == "PMID")) {
         result <- read_medline(z_dframe)
       } else {
@@ -361,15 +361,45 @@ detect_delimiter <- function(x) {
 }
 
 
+# the pattern that identifies a tag at the start of a line
+#
+# A RIS tag is always two characters -- a capital followed by a capital or a
+# digit -- then two spaces and a hyphen. The original pattern made the
+# separator optional (`-{0,2}\s{0,}`), so a wrapped EBSCO keyword line matched
+# as a tag. EBSCO breaks a multi-value KW field across lines without repeating
+# the tag, and any keyword whose first word looks like a tag was then
+# misparsed: "E7 economies" became tag "E7" with text "economies", so the
+# keyword was truncated and filed under a bogus "E7" field, and the following
+# keyword lines inherited "E7" from the fill-forward below. A whole-line match
+# such as "EKC" or "GHG" left no text at all and was dropped outright by the
+# empty-row filter. Requiring the separator is enough on its own to tell a tag
+# from a keyword; no list of known tags is needed.
+#
+# The trailing space is optional at end of line, because write_ris() emits a
+# bare "ER  -" and those files have to keep parsing.
+#
+# Web of Science .ciw files use a different form entirely -- a bare single
+# space and no hyphen, as in "AU Smith, J" -- which the strict pattern matches
+# not at all, so they keep the original permissive one. Adding a pattern per
+# format is the way to support other dialects (.nbib and its "PMID- " tags)
+# later.
+ris_tag_pattern <- function(tag_type = "ris") {
+  if (identical(tag_type, "ris")) {
+    paste0(
+      "^[[:upper:]][[:upper:][:digit:]]  - ",
+      "|^[[:upper:]][[:upper:][:digit:]]  -$"
+    )
+  } else {
+    "^([[:upper:]]{2,4}|[[:upper:]]{1}[[:digit:]]{1})\\s{0,}-{0,2}\\s{0,}"
+  }
+}
+
+
 # split raw RIS lines into a data frame of tag / text / row, filling tags
 # forward across continuation lines
-prep_ris <- function(z, delimiter) {
+prep_ris <- function(z, delimiter, tag_type = "ris") {
   # detect tags
-  tags <- regexpr(
-    "^([[:upper:]]{2,4}|[[:upper:]]{1}[[:digit:]]{1})\\s{0,}-{0,2}\\s{0,}",
-    perl = TRUE,
-    z
-  )
+  tags <- regexpr(ris_tag_pattern(tag_type), perl = TRUE, z)
   z_dframe <- data.frame(
     text = z,
     row = seq_along(z),

@@ -124,6 +124,22 @@ otherwise, so both encodings read correctly.
 Ovid exports are pure ASCII, which is why neither bug is visible on EconLit or
 Medline files.
 
+### Keywords wrapped across lines
+
+EBSCO breaks a multi-value `KW` field across several lines *without
+repeating the tag*:
+
+```
+KW  - Carbon emissions
+E7 economies
+EKC
+GHG
+Non-renewable
+M3  - Article
+```
+
+The tag is filled forward across those lines. 
+
 ## Notes and caveats
 
 **`ED` is read as two fields.** The RIS tag table maps `ED` to both `editor`
@@ -136,6 +152,15 @@ meaning applies to a given source.
 **Two upstream typos are preserved verbatim**, for the same reason: the Medline
 table maps `PMC` to `pubmed_central_identitfier` and the Web of Science table
 maps `WC` to `wos_cagegories`.
+
+**Only RIS-form tags are recognised in RIS files.** A tag has to be a capital
+followed by a capital or a digit, then two spaces and a hyphen. A line that does
+not match is treated as a continuation of the field above it, which is what
+makes wrapped keyword blocks parse correctly. Web of Science `.ciw` files use a
+different form (`AU Smith, J`) and are matched by a separate, permissive
+pattern, chosen by file type. `.nbib`/PubMed exports, whose tags look like
+`PMID- 29939999` and may replace a space with another character, are a planned
+enhancement: they currently fall back to the permissive pattern.
 
 **Mixing with revtools.** `ristools` does not depend on, load, or modify
 revtools, and defines no S3 methods on revtools' classes. But if you pass
