@@ -221,9 +221,15 @@ entry_to_ris <- function(
     return(character(0))
   }
 
-  # Ovid writes year-only dates as "2020//"; the reader strips the "//"
+  # Ovid writes year-only dates as "2020//". This is off by default: the reader
+  # preserves a year exactly as the file has it, so adding a suffix here would
+  # make read -> write -> read lossy, turning "2020" into "2020//" and then
+  # "2020////". Pass year_suffix = "//" to write the Ovid form deliberately.
   if (nzchar(year_suffix)) {
-    yr <- which(z$tag %in% c("Y1", "PY") & grepl("^[0-9]{4}$", z$value))
+    yr <- which(
+      z$tag %in% c("Y1", "PY") &
+        grepl("^[0-9]{4}$", z$value)
+    )
     if (length(yr) > 0) {
       z$value[yr] <- paste0(z$value[yr], year_suffix)
     }
@@ -269,8 +275,10 @@ entry_to_ris <- function(
 #'   tag as the field name, so position carries no meaning and this would
 #'   relabel a correct `journal`. Only set this for records from a reader that
 #'   discards the source tag.
-#' @param year_suffix Appended to bare 4-digit years. Defaults to `"//"` for
-#'   the Ovid dialect and `""` otherwise.
+#' @param year_suffix Appended to bare 4-digit `Y1`/`PY` values. Defaults to
+#'   `""`, which writes the year exactly as given, so a file read by
+#'   [read_ris()] writes back unchanged. Pass `"//"` for the `"2020//"` form
+#'   that Ovid exports use.
 #' @param blank_line If `TRUE`, add an empty line after each `ER`.
 #' @param eol Line ending. Defaults to `"\r\n"` for RIS and `"\n"` for BibTeX.
 #'
@@ -338,7 +346,7 @@ write_ris <- function(
     eol <- if (format == "ris") "\r\n" else "\n"
   }
   if (is.null(year_suffix)) {
-    year_suffix <- if (dialect == "ovid") "//" else ""
+    year_suffix <- ""
   }
   if (is.null(delimiter)) {
     delimiter <- ""

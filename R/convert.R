@@ -17,23 +17,21 @@
 #' @param delimiter The string used to join multiple values in one field.
 #'   Defaults to [ris_sep()].
 #'
-#' @return A data frame with a `label` column followed by one column per field
-#'   found anywhere in `x`. Records lacking a field get `NA`.
+#' @return A data frame with one column per field found anywhere in `x`, in the
+#'   order fields are first seen. Records lacking a field get `NA`. The record
+#'   names of `x` are not added as a column; use `names(x)` for those.
 #'
 #' @details
 #' The round trip through [df_to_ris()] is exact as long as `delimiter` does
 #' not occur in the data, which is why [ris_sep()] is the default. A custom
 #' delimiter that appears inside a real value will not split back correctly.
 #'
-#' Columns appear in the order fields are first seen across `x`, except that
-#' where a mix of tag-named and semantically named fields is present, the
-#' tag-named ones are placed last.
-#'
 #' @examples
 #' recs <- structure(
 #'   list(ref_1 = list(
-#'     title = "A study",
-#'     author = c("Smith, J.", "Jones, A.")
+#'     TY = "JOUR",
+#'     TI = "A study",
+#'     AU = c("Smith, J.", "Jones, A.")
 #'   )),
 #'   class = "ris_records"
 #' )
@@ -43,13 +41,12 @@
 #'
 #' @export
 ris_to_df <- function(x, delimiter = ris_sep()) {
+  # columns appear in the order fields are first seen across x. Field names are
+  # not reordered by length: an earlier version pushed names under 3 characters
+  # to the end, to keep raw tags behind the semantic names the old reader
+  # produced, but that also reordered any record whose field names were 3 or
+  # more characters -- list(TY, ABCD, T1) came back as ABCD, TY, T1.
   cols <- unique(unlist(lapply(x, names)))
-
-  # fix bug where ris tags get placed first if they appear before bib tags
-  col_n <- nchar(cols)
-  if (any(col_n < 3)) {
-    cols <- cols[c(which(col_n >= 3), which(col_n < 3))]
-  }
 
   x_list <- lapply(
     x,
@@ -80,13 +77,11 @@ ris_to_df <- function(x, delimiter = ris_sep()) {
     cols = cols
   )
 
-  # rbind() takes row names from the names of x_list and tries to translate
-  # them to the native encoding, warning once per record for a label like
-  # "Goncalves_2024_ES&P". Labels are captured below and the row names are
-  # discarded, so the names are dropped first.
-  labels <- names(x_list)
+  # unname() before rbind(): rbind() otherwise takes row names from the names of
+  # x_list and tries to translate them to the native encoding, warning once per
+  # record for a name like "Goncalves_2024_ES&P". The record names are carried
+  # by x itself, so nothing is lost by dropping them here.
   x_dframe <- data.frame(
-    label = make.names(labels, unique = TRUE),
     do.call(rbind, unname(x_list)),
     stringsAsFactors = FALSE
   )
@@ -101,8 +96,8 @@ ris_to_df <- function(x, delimiter = ris_sep()) {
 #' Splits a data frame of records into a `ris_records` list, splitting
 #' multi-value fields on `delimiter`.
 #'
-#' @param x A data frame with one row per record. A `label` column, if
-#'   present, supplies the names of the result and is not treated as a field.
+#' @param x A data frame with one row per record. A `label` column, if you have
+#'   added one, supplies the names of the result and is not treated as a field.
 #' @param delimiter The string on which to split multi-value fields. Defaults
 #'   to [ris_sep()]. Split with `fixed = TRUE`, so this is a literal string
 #'   rather than a regular expression.
@@ -111,26 +106,27 @@ ris_to_df <- function(x, delimiter = ris_sep()) {
 #'   each a named list of fields.
 #'
 #' @details
-#' *Every* field is split, not just `author` and `keywords`. This is safe
-#' because the default delimiter cannot occur in bibliographic text, so a value
-#' containing it can only have been joined by [ris_to_df()], and no field needs
-#' special handling.
+#' *Every* field is split, not just the ones that usually hold several values.
+#' This is safe because the default delimiter cannot occur in bibliographic
+#' text, so a value containing it can only have been joined by [ris_to_df()],
+#' and no field needs special handling.
 #'
 #' Columns for which a record has no value are dropped rather than kept as
-#' `NA`, so `is.null(x[[i]]$abstract)` means what it says.
+#' `NA`, so `is.null(x[[i]]$AB)` means what it says.
 #'
-#' If `x` has no `label` column, records are named `ref_1`, `ref_2`, … via
-#' [ris_index()].
+#' [read_ris()] does not produce a `label` column, so records are normally named
+#' `ref_1`, `ref_2`, … via [ris_index()]. Adding a `label` column yourself is
+#' the way to name them something else.
 #'
 #' @examples
 #' df <- data.frame(
-#'   label = "ref_1",
-#'   title = "A study",
-#'   author = "Smith, J. | Jones, A.",
+#'   TY = "JOUR",
+#'   TI = "A study",
+#'   AU = "Smith, J. | Jones, A.",
 #'   stringsAsFactors = FALSE
 #' )
 #' recs <- df_to_ris(df)
-#' recs$ref_1$author
+#' recs$ref_1$AU
 #'
 #' @seealso [ris_to_df()] for the inverse.
 #'

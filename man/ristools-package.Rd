@@ -6,7 +6,7 @@
 \alias{ristools-package}
 \title{ristools: Faithful Reading and Writing of RIS and BibTeX Bibliographic Files}
 \description{
-Reads and writes RIS, BibTeX, Medline and Web of Science bibliographic files without the data loss that affects several existing implementations. Multiple values in a single field (authors, keywords, JEL descriptors, ISSNs) are joined with a delimiter that cannot occur in bibliographic text, so the record-to-data-frame conversion is lossless and reversible. Also preserves page-range order, trailing punctuation in titles, and tags containing digits. Depends only on base R.
+Reads and writes RIS and BibTeX bibliographic files without the data loss that affects several existing implementations. A RIS file becomes a data frame whose columns are the file's own tags, so it can be inspected, edited and written back with nothing renamed, merged or reordered. Multiple values in a single field (authors, keywords, JEL descriptors, ISSNs) are joined with a delimiter that cannot occur in bibliographic text, making the conversion reversible. Also handles byte order marks, detects file encoding, and preserves trailing punctuation in titles and tags containing digits. Depends only on base R.
 }
 \author{
 \strong{Maintainer}: Mark Engelbert \email{mengelbert@3ieimpact.org}

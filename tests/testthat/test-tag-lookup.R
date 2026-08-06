@@ -1,24 +1,15 @@
-# These tests pin the tag tables to the values inherited from revtools 0.4.1.
-# They are not testing "correct" mappings -- several are demonstrably odd (see
-# below) -- but changing any of them changes how existing files parse, so they
-# must only ever change deliberately.
+# The tag table is reference data for callers, and the source of the canonical
+# field order write_ris() emits. These tests pin its shape and that order: the
+# reader does not consult the table to name columns, so a change here cannot
+# alter how a file parses, but it can change the order of a written file.
 
-test_that("each table has the expected dimensions", {
-  expect_equal(dim(ris_tag_lookup("ris")), c(42L, 3L))
-  expect_equal(dim(ris_tag_lookup("ris_write")), c(25L, 2L))
-  expect_equal(dim(ris_tag_lookup("medline")), c(67L, 2L))
-  expect_equal(dim(ris_tag_lookup("wos")), c(82L, 2L))
-})
-
-test_that("the order column exists only for type = 'ris'", {
-  expect_true("order" %in% colnames(ris_tag_lookup("ris")))
-  expect_false("order" %in% colnames(ris_tag_lookup("ris_write")))
-  expect_false("order" %in% colnames(ris_tag_lookup("medline")))
-  expect_false("order" %in% colnames(ris_tag_lookup("wos")))
+test_that("the table has one row per tag and three columns", {
+  expect_equal(dim(ris_tag_lookup()), c(42L, 3L))
+  expect_equal(colnames(ris_tag_lookup()), c("ris", "bib", "order"))
 })
 
 test_that("the order column is the field's position in the definition list", {
-  tbl <- ris_tag_lookup("ris")
+  tbl <- ris_tag_lookup()
 
   expect_type(tbl$order, "integer")
   expect_equal(tbl$order[tbl$ris == "TY"], 1L)
@@ -27,63 +18,51 @@ test_that("the order column is the field's position in the definition list", {
   expect_equal(max(tbl$order), 24L)
 })
 
-test_that("ris defaults to type = 'ris'", {
-  expect_equal(ris_tag_lookup(), ris_tag_lookup("ris"))
+test_that("the table takes no arguments", {
+  # 0.3.0 dropped the type argument along with the medline, wos and ris_write
+  # tables; see inst/notes/reintroducing-semantic-fields.md
+  expect_length(formals(ris_tag_lookup), 0L)
 })
 
-test_that("an unknown type is rejected", {
-  expect_error(ris_tag_lookup("nonsense"))
+test_that("several tags share a field name, which is why they stay separate", {
+  tbl <- ris_tag_lookup()
+
+  expect_setequal(
+    tbl$ris[tbl$bib == "journal"],
+    c("JO", "T2", "T3", "SO", "JT", "JF", "JA")
+  )
+  expect_setequal(tbl$ris[tbl$bib == "pages"], c("EP", "BP", "SP"))
+  expect_setequal(
+    tbl$ris[tbl$bib == "author"],
+    c("AU", "A1", "A2", "A3", "A4", "A5")
+  )
 })
 
-test_that("upstream typos are preserved verbatim", {
-  # correcting either of these would silently orphan any code keying on them
-  medline <- ris_tag_lookup("medline")
-  expect_equal(medline$bib[medline$ris == "PMC"], "pubmed_central_identitfier")
-
-  wos <- ris_tag_lookup("wos")
-  expect_equal(wos$bib[wos$ris == "WC"], "wos_cagegories")
-})
-
-test_that("ED maps to both editor and edition in the ris table", {
-  # An upstream bug, preserved deliberately: because the tag-to-field merge is
-  # many-to-many, every ED line in a file is read as two fields. Fixing it is
-  # a separate change and needs its own decision about which ED means what.
-  tbl <- ris_tag_lookup("ris")
+test_that("ED is listed twice, as both editor and edition", {
+  # a genuine ambiguity in the RIS conventions, left for the caller to resolve.
+  # It is inert here: nothing merges tags to fields, so no file is affected.
+  tbl <- ris_tag_lookup()
   ed <- tbl[tbl$ris == "ED", ]
 
   expect_equal(nrow(ed), 2)
   expect_setequal(ed$bib, c("editor", "edition"))
 })
 
-test_that("ED is the only duplicated tag in any table", {
-  for (ty in c("ris", "ris_write", "medline", "wos")) {
-    tbl <- ris_tag_lookup(ty)
-    dups <- unique(tbl$ris[duplicated(tbl$ris)])
-    expected <- if (ty == "ris") "ED" else character(0)
-    expect_equal(dups, expected, info = paste("type:", ty))
-  }
+test_that("ED is the only tag listed more than once", {
+  tbl <- ris_tag_lookup()
+
+  expect_equal(unique(tbl$ris[duplicated(tbl$ris)]), "ED")
 })
 
-test_that("wos maps two tags each to file_name and pages", {
-  wos <- ris_tag_lookup("wos")
+test_that("the table is plain character data with default row names", {
+  tbl <- ris_tag_lookup()
 
-  expect_setequal(wos$ris[wos$bib == "file_name"], c("FN", "N"))
-  expect_setequal(wos$ris[wos$bib == "pages"], c("BP", "EP"))
+  expect_type(tbl$ris, "character")
+  expect_type(tbl$bib, "character")
+  expect_equal(rownames(tbl), as.character(seq_len(nrow(tbl))))
 })
 
-test_that("medline maps both CRDT and DA to date_created", {
-  medline <- ris_tag_lookup("medline")
-
-  expect_setequal(medline$ris[medline$bib == "date_created"], c("CRDT", "DA"))
-})
-
-test_that("the tables are plain character data with default row names", {
-  for (ty in c("ris", "ris_write", "medline", "wos")) {
-    tbl <- ris_tag_lookup(ty)
-    expect_type(tbl$ris, "character")
-    expect_type(tbl$bib, "character")
-    # merge() in the read path keys on 'ris'; stray row names would survive
-    # into the merged frame and confuse ordering
-    expect_equal(rownames(tbl), as.character(seq_len(nrow(tbl))))
-  }
+test_that("every tag in the table has the shape the reader recognises", {
+  # two characters: a capital, then a capital or a digit
+  expect_true(all(grepl("^[A-Z][A-Z0-9]$", ris_tag_lookup()$ris)))
 })

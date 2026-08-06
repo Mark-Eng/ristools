@@ -83,32 +83,23 @@ test_that("an end-page-only record has no SP column at all", {
   expect_false("pages" %in% colnames(df))
 })
 
-test_that("rename_columns = TRUE reproduces today's semantic output", {
+test_that("values are carried through under their own tags, unaltered", {
   f <- write_temp_ris(awkward_ris())
   on.exit(unlink(f))
 
-  df <- read_ris(f, rename_columns = TRUE)
+  df <- read_ris(f)
 
-  expect_equal(df$title, "Adaptation in the U.S.")
+  expect_equal(df$T1, "Adaptation in the U.S.")
   expect_equal(
-    df$author,
+    df$A1,
     paste("Smith, John A.", "Jones and Partners, Mary B.", sep = ris_sep())
   )
-  expect_equal(df$year, "2020")
-  expect_equal(df$journal, "Journal of Economics and Statistics")
-  expect_equal(df$pages, "419-41")
+  # the year keeps the Ovid "//" suffix the file carries
+  expect_equal(df$Y1, "2020//")
+  expect_equal(df$JF, "Journal of Economics and Statistics")
 })
 
-test_that("rename_columns = TRUE on a sparse record matches pre-0.2.0 behaviour", {
-  f <- write_temp_ris(sparse_ris())
-  on.exit(unlink(f))
-
-  df <- read_ris(f, rename_columns = TRUE)
-
-  expect_equal(df$pages, "-218")
-})
-
-test_that("return_df = FALSE keeps raw tags as field names by default", {
+test_that("return_df = FALSE keeps raw tags as field names", {
   f <- write_temp_ris(awkward_ris())
   on.exit(unlink(f))
 
@@ -131,40 +122,18 @@ test_that("a repeated tag becomes one vector under that tag", {
   ))
 })
 
-test_that("record labels are the same regardless of rename_columns", {
+test_that("records are named by position, and the data frame has no label", {
   f <- write_temp_ris(awkward_ris())
   on.exit(unlink(f))
 
-  recs_raw <- read_ris(f, return_df = FALSE)
-  recs_renamed <- read_ris(f, return_df = FALSE, rename_columns = TRUE)
-
-  expect_equal(names(recs_raw), names(recs_renamed))
-})
-
-test_that("a Web of Science file defaults to its own raw tags", {
-  f <- write_temp_ris(wos_ciw(), ext = ".ciw")
-  on.exit(unlink(f))
+  recs <- read_ris(f, return_df = FALSE)
+  expect_equal(names(recs), "ref_1")
 
   df <- read_ris(f)
-
-  expect_equal(df$AU, paste("Smith, J", "Jones, M", sep = ris_sep()))
-  expect_equal(df$TI, "A record in Web of Science format")
-  expect_equal(df$PY, "2018")
-  expect_false(any(c("author", "title", "year") %in% colnames(df)))
+  expect_false("label" %in% colnames(df))
 })
 
-test_that("a Web of Science file with rename_columns = TRUE matches prior behaviour", {
-  f <- write_temp_ris(wos_ciw(), ext = ".ciw")
-  on.exit(unlink(f))
-
-  df <- read_ris(f, rename_columns = TRUE)
-
-  expect_equal(df$author, paste("Smith, J", "Jones, M", sep = ris_sep()))
-  expect_equal(df$title, "A record in Web of Science format")
-  expect_equal(df$year, "2018")
-})
-
-test_that("BibTeX output is unaffected by rename_columns", {
+test_that("a BibTeX file keeps the field names the file itself uses", {
   f <- write_temp_ris(c(
     "@ARTICLE{smith2020,",
     "author={Smith, John A.},",
@@ -175,11 +144,12 @@ test_that("BibTeX output is unaffected by rename_columns", {
   ), ext = ".bib")
   on.exit(unlink(f))
 
-  df_default <- read_ris(f)
-  df_renamed <- read_ris(f, rename_columns = TRUE)
+  # BibTeX field names are not RIS tags, so there is no raw tag form to keep:
+  # a .bib read is named after its own fields
+  df <- read_ris(f)
 
-  expect_equal(df_default, df_renamed)
-  expect_true("author" %in% colnames(df_default))
+  expect_true(all(c("author", "title", "year") %in% colnames(df)))
+  expect_equal(df$author, "Smith, John A.")
 })
 
 test_that("a raw-tag read round-trips through write_ris with values intact", {
@@ -196,21 +166,7 @@ test_that("a raw-tag read round-trips through write_ris with values intact", {
   }
 })
 
-test_that("a rename_columns = TRUE read round-trips through write_ris with values intact", {
-  f1 <- write_temp_ris(awkward_ris())
-  f2 <- tempfile(fileext = ".ris")
-  on.exit(unlink(c(f1, f2)))
-
-  df1 <- read_ris(f1, rename_columns = TRUE)
-  write_ris(df1, f2)
-  df2 <- read_ris(f2, rename_columns = TRUE)
-
-  expect_equal(df2$title, df1$title)
-  expect_equal(df2$author, df1$author)
-  expect_equal(df2$pages, df1$pages)
-})
-
-test_that("real EBSCO files default to tag-only columns with no keyword loss", {
+test_that("real EBSCO files give tag-only columns with no keyword loss", {
   skip_if_not(
     dir.exists(test_path("../ebsco_tests")),
     "EBSCO test fixtures not present"
@@ -218,16 +174,19 @@ test_that("real EBSCO files default to tag-only columns with no keyword loss", {
   files <- list.files(test_path("../ebsco_tests"), full.names = TRUE)
   skip_if(length(files) == 0, "no EBSCO test fixtures found")
 
-  f <- files[[1]]
+  f <- grep("1-163", files, value = TRUE)[1]
+  skip_if(is.na(f), "the 163-record EBSCO fixture is not present")
   df <- read_ris(f)
 
   expect_true("KW" %in% colnames(df))
   expect_false(any(c("keywords", "author", "title", "journal") %in% colnames(df)))
+  # every column is a raw tag, so none is a lower-case semantic name
+  expect_true(all(grepl("^[A-Z][A-Z0-9]{1,3}$", colnames(df))))
 
-  df_renamed <- read_ris(f, rename_columns = TRUE)
-  expect_true("keywords" %in% colnames(df_renamed))
-
-  kw_raw <- lengths(strsplit(df$KW, ris_sep(), fixed = TRUE))
-  kw_renamed <- lengths(strsplit(df_renamed$keywords, ris_sep(), fixed = TRUE))
-  expect_equal(kw_raw, kw_renamed)
+  # absolute counts, measured before the 0.3.0 refactor. The keyword total is
+  # the guarantee the wrapped-tag fix bought: a permissive tag pattern silently
+  # truncated or dropped keywords, and the loss showed up only as a lower count.
+  expect_equal(nrow(df), 163L)
+  kw_counts <- lengths(strsplit(df$KW, ris_sep(), fixed = TRUE))
+  expect_equal(sum(kw_counts), 1573L)
 })

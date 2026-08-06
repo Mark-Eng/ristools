@@ -2,14 +2,9 @@
 % Please edit documentation in R/read-ris.R
 \name{read_ris}
 \alias{read_ris}
-\title{Read a RIS, BibTeX, Medline or Web of Science file}
+\title{Read a RIS or BibTeX file}
 \usage{
-read_ris(
-  filename,
-  return_df = TRUE,
-  delimiter = ris_sep(),
-  rename_columns = FALSE
-)
+read_ris(filename, return_df = TRUE, delimiter = ris_sep(), full_path = FALSE)
 }
 \arguments{
 \item{filename}{Path to a file, or a character vector of paths. Multiple
@@ -23,56 +18,45 @@ element per record, each a named list of fields.}
 \item{delimiter}{The string used to join multiple values in one field when
 \code{return_df = TRUE}. Defaults to \code{\link[=ris_sep]{ris_sep()}}.}
 
-\item{rename_columns}{If \code{FALSE} (the default), fields keep the raw tag
-they were read under (\code{AU}, \code{TI}, \code{PY}, \code{KW}, …) — one column per tag,
-exactly as the file has it, with no merging of tags that mean the same
-thing. If \code{TRUE}, fields are renamed and merged into the semantic names
-this package used by default before 0.2.0 (\code{author}, \code{title}, \code{year},
-\code{keywords}, …); see Details.}
+\item{full_path}{Applies to multi-file reads. If \code{FALSE} (the default), the
+\code{filename} column holds the bare file name; if \code{TRUE}, the path as passed
+to \code{filename}. Reading files of the same name from more than one directory
+produces duplicate bare names, which is warned about — use \code{TRUE} there.}
 }
 \value{
-A data frame, or a \code{ris_records} list if \code{return_df = FALSE}.
+A data frame with one column per RIS tag found in the input, or a
+\code{ris_records} list if \code{return_df = FALSE}.
 }
 \description{
-Imports one or more bibliographic files, detecting the format from their
-contents.
+Imports one or more bibliographic files into a data frame whose columns are
+the file's own RIS tags.
 }
 \details{
-Format detection is by content, not extension: a file with more \verb{\{} than
-\code{" - "} in its first 200 lines is treated as BibTeX, otherwise as RIS. A
-RIS-like file containing a \code{PMID} tag is read as Medline; a \code{.ciw} file is
-read with Web of Science tags.
-
-\strong{\code{rename_columns = FALSE} (the default)} keeps every field under the raw
-tag it was read from, so the output mirrors the input file as closely as
-possible: a record can be inspected, edited as a data frame, and written
-back out with \code{\link[=write_ris]{write_ris()}} with nothing merged or renamed along the way.
+Every field keeps the raw tag it was read under (\code{AU}, \code{TI}, \code{PY}, \code{KW}, …),
+so the output mirrors the input file as closely as a table can: a file can be
+read, inspected, edited and written back out with \code{\link[=write_ris]{write_ris()}} with nothing
+merged, renamed or reordered along the way. Tags that carry the same meaning
+are \emph{not} combined — a file using both \code{KW} and \code{DE} gets a column for each.
 A tag that repeats within one record (two \code{AU} lines, several \code{KW} lines)
-becomes a vector under that one tag. Because the tag used for the same
-concept can differ by source (\code{author} is \code{AU} in an EconLit export but
-\code{A1} in an Ovid one), the column names of two files read this way can
-differ even when their content lines up conceptually. BibTeX input is
-unaffected by \code{rename_columns}, since its field names (\code{author}, \code{title},
-…) are not RIS tags to begin with.
+becomes a vector under that one tag, joined by \code{delimiter} in the data frame.
 
-\strong{\code{rename_columns = TRUE}} merges tags that carry the same meaning into a
-single semantically named column:
-\itemize{
-\item \code{author} from whichever of \code{AU}/\code{A1}/\code{A2}/… occurs most often in the file;
-any other author tag keeps its own name.
-\item \code{journal} from the first of \code{JO}/\code{T2}/\code{T3}/\code{SO}/\code{JT}/\code{JF}/\code{JA} present;
-the others again keep their own names.
-\item \code{pages} from \code{SP}/\code{BP} and \code{EP} joined as \code{"419-41"}. An end page with no
-start page becomes \code{"-218"}.
-\item \code{year}, \code{title}, \code{keywords}, \code{abstract}, \code{doi}, \code{issn} and the rest from
-the mapping \code{\link[=ris_tag_lookup]{ris_tag_lookup()}} returns.
-}
+Because the tag used for a given concept differs by source — the author is
+\code{AU} in an EconLit export but \code{A1} in an Ovid one — the column names of two
+files read this way can differ even where their content lines up. This suits
+working with one file, or several from the same platform. Use
+\code{\link[=ris_tag_lookup]{ris_tag_lookup()}} to look up what a tag conventionally means.
 
-This is useful when combining files from several sources, where the same
-concept arrives under a different tag in each. Note that the merge is not
-reversible: once two tags become one column, \code{\link[=write_ris]{write_ris()}} cannot tell which
-value came from which, so a file read this way and written back out may not
-use the tags it came in with.
+A RIS tag is two characters, a capital followed by a capital or a digit, then
+two spaces and a hyphen. A line not matching that is treated as a
+continuation of the field above it, which is what makes wrapped keyword
+blocks parse correctly. Records must be terminated by \code{ER}; a file without
+one is rejected rather than guessed at. Web of Science (\code{.ciw}) and PubMed
+(\code{.nbib}) exports tag their lines differently and are not supported.
+
+BibTeX is detected by content rather than extension: a file with more \verb{\{}
+than \code{" - "} in its first 200 lines is read as BibTeX. Its columns are named
+after its own field names (\code{author}, \code{title}, …), which are not RIS tags, so
+there is no raw-tag form to preserve.
 }
 \examples{
 f <- tempfile(fileext = ".ris")
@@ -86,15 +70,18 @@ writeLines(c(
 ), f)
 
 df <- read_ris(f)
+colnames(df)
 df$A1
 
-df2 <- read_ris(f, rename_columns = TRUE)
-df2$author
+# one list element per record, with proper vectors rather than joined strings
+recs <- read_ris(f, return_df = FALSE)
+recs[[1]]$A1
 
 unlink(f)
 
 }
 \seealso{
 \code{\link[=write_ris]{write_ris()}} to write files back out, \code{\link[=ris_to_df]{ris_to_df()}} and
-\code{\link[=df_to_ris]{df_to_ris()}} to convert between the two representations.
+\code{\link[=df_to_ris]{df_to_ris()}} to convert between the two representations,
+\code{\link[=ris_tag_lookup]{ris_tag_lookup()}} for what a tag means.
 }

@@ -1,19 +1,23 @@
 # ============================================================================
-#  Tag lookup tables
+#  The RIS tag table
 #
-#  Maps the tags used by RIS, Medline and Web of Science exports to field
-#  names. Reproduced as static literals from revtools 0.4.1's tag_lookup(),
-#  which built them the same way but was the package's last remaining runtime
-#  dependency; inlining them makes ristools base-R only.
+#  What each RIS tag conventionally means. The reader does not consult this to
+#  name its columns -- it uses the tags in the file itself -- so this is
+#  reference data, surfaced through ris_tag_lookup(), plus the source of the
+#  canonical field order write_ris() emits.
 #
-#  The tables are deliberately verbatim, including two upstream typos and one
-#  upstream bug (see below). Changing any of them changes how files parse, so
-#  they are pinned by tests in tests/testthat/test-tag-lookup.R.
+#  Tables for Medline and Web of Science tags were dropped in 0.3.0 along with
+#  support for reading those formats; see
+#  inst/notes/reintroducing-semantic-fields.md.
+#
+#  Pinned by tests in tests/testthat/test-tag-lookup.R: the 'order' column
+#  changes the order write_ris() emits tags in, so it must only change
+#  deliberately.
 # ============================================================================
 
-# Tag definitions, as name = tag(s). Order matters: for type = "ris" the
-# 'order' column is the position of each field in this list, which is what
-# sets the canonical field order of a parsed record.
+# Tag definitions, as name = tag(s). Order matters: the 'order' column is the
+# position of each field in this list, which sets the canonical field order of a
+# written record.
 ris_tag_definitions <- function() {
   list(
     ris = list(
@@ -45,221 +49,40 @@ ris_tag_definitions <- function() {
       edition = "ED",
       language = "LA",
       eppi_id = "U1"
-    ),
-    # retained for completeness; the writer builds its own tag map in
-    # ris_write_tags() rather than inverting this
-    ris_write = list(
-      type = "TY",
-      author = "AU",
-      year = "PY",
-      title = "TI",
-      journal = "JO",
-      volume = "VL",
-      number = "IS",
-      startpage = "SP",
-      endpage = "EP",
-      abstract = "AB",
-      keywords = "KW",
-      doi = "DO",
-      call = "CN",
-      issn = "SN",
-      url = "UR",
-      accession = "AN",
-      institution = "CY",
-      publisher = "PB",
-      pubplace = "PP",
-      address = "AD",
-      editor = "ED",
-      edition = "ET",
-      language = "LA",
-      eppi_id = "U1",
-      end = "ER"
-    ),
-    medline = list(
-      abstract = "AB",
-      copyright_info = "CI",
-      affiliation = "AD",
-      investigator_affiliation = "IRAD",
-      article_id = "AID",
-      author = "AU",
-      author_id = "AUID",
-      author_full = "FAU",
-      book_title = "BTI",
-      collection_title = "CTI",
-      conflict_of_interest = "COI",
-      author_corporate = "CN",
-      date_created = "CRDT",
-      date_completed = "DCOM",
-      # 'date_created' appears twice by design: CRDT and DA both carry it
-      date_created = "DA",
-      date_revised = "LR",
-      date_published_elec = "DEP",
-      date_published = "DP",
-      edition = "EN",
-      editor = "ED",
-      editor_full = "FED",
-      date_added = "EDAT",
-      gene_symbol = "GS",
-      general_note = "GN",
-      grant_number = "GR",
-      investigator = "IR",
-      investigator_full = "FIR",
-      isbn = "ISBN",
-      issn = "IS",
-      issue = "IP",
-      journal_abbreviated = "TA",
-      journal = "JT",
-      language = "LA",
-      location_id = "LID",
-      manuscript_id = "MID",
-      mesh_date = "MHDA",
-      mesh_terms = "MH",
-      nlm_id = "JID",
-      references_n = "RF",
-      abstract_other = "OAB",
-      copyright_info_other = "OCI",
-      id_other = "OID",
-      term_other = "OT",
-      term_owner_other = "OTO",
-      owner = "OWN",
-      pages = "PG",
-      personal_name_as_subject = "PS",
-      personal_name_as_subject_full = "FPS",
-      place_published = "PL",
-      publication_history_status = "PHST",
-      publication_status = "PST",
-      publication_type = "PT",
-      publishing_model = "PUBM",
-      # upstream typo, kept verbatim ("identitfier")
-      pubmed_central_identitfier = "PMC",
-      pubmed_central_release = "PMCR",
-      pubmed_id = "PMID",
-      registry_number = "RN",
-      substance_name = "NM",
-      secondary_source_id = "SI",
-      source = "SO",
-      space_flight_mission = "SFM",
-      status = "STAT",
-      subset = "SB",
-      title = "TI",
-      title_transliterated = "TT",
-      volume = "VI",
-      volume_title = "VTI"
-    ),
-    wos = list(
-      file_name = c("FN", "N"),
-      version = "VN",
-      publication_type = "PT",
-      author = "AU",
-      author_full = "AF",
-      year = "PY",
-      date_published = "PD",
-      early_access_year = "EY",
-      early_access_date = "EA",
-      book_author = "BA",
-      book_author_full = "BF",
-      group_author = "CA",
-      group_book_author = "GP",
-      author_other_lang = "Z2",
-      editor = "BE",
-      title = "TI",
-      title_other_lang = "Z1",
-      title_foreign = "FT",
-      book_series_title = "SE",
-      book_series_subtitle = "BS",
-      source = "SO",
-      source_other_lang = "Z3",
-      source_abbreviation_29char = "J9",
-      source_abbreviation_iso = "JI",
-      volume = "VL",
-      issue = "IS",
-      pages = c("BP", "EP"),
-      n_pages = "PG",
-      n_chapters = "P2",
-      doi = "DI",
-      doi_book = "D2",
-      author_keywords = "DE",
-      keywords_plus = "ID",
-      abstract = "AB",
-      abstract_other_lang = "Z4",
-      author_address = "C1",
-      reprint_address = "RP",
-      email = "EM",
-      orcid_id = "OI",
-      researcher_id = "RI",
-      special_issue = "SI",
-      publisher = "PU",
-      publisher_city = "PI",
-      publisher_address = "PA",
-      conference_title = "CT",
-      conference_location = "CL",
-      conference_date = "CY",
-      conference_host = "HO",
-      conference_sponsor = "SP",
-      meeting_abstract = "MA",
-      funding_agency = "FA",
-      funding_text = "FX",
-      patent_assignee = "AE",
-      patent_number = "PN",
-      article_number = "AR",
-      supplement = "SU",
-      language = "LA",
-      document_type = "DT",
-      issn = "SN",
-      eissn = "EI",
-      isbn = "BN",
-      accession_number = "UT",
-      document_delivery_id = "GA",
-      pubmed_id = "PM",
-      open_access = "OA",
-      # upstream typo, kept verbatim ("cagegories")
-      wos_cagegories = "WC",
-      research_areas = "SC",
-      cited_references = "CR",
-      n_cited_references = "NR",
-      n_cited_woscc = "TC",
-      n_cited_csc = "Z8",
-      n_cited_biosis = "ZB",
-      n_cited_allwos = "Z9",
-      esi_hot_paper = "HP",
-      esi_highly_cited = "HC",
-      usage_180_days = "U1",
-      usage_since_2013 = "U2",
-      date_generated = "DA",
-      end_record = "ER",
-      end_file = "EF"
     )
   )
 }
 
 
-#' Look up the field name for each tag of a bibliographic format
+#' What each RIS tag conventionally means
 #'
-#' Returns the tag-to-field mapping used when parsing a file of the given type.
-#' Useful for checking which field a tag is read as, and which tags
-#' `read_ris(rename_columns = TRUE)` merges into one column.
+#' Reference table of RIS tags and the field each conventionally holds.
+#' [read_ris()] names its columns after the tags themselves, so this is the
+#' place to look up what a column such as `M3` or `U1` is.
 #'
-#' @param type One of `"ris"` (the default), `"ris_write"`, `"medline"` or
-#'   `"wos"`.
+#' @return A data frame with one row per tag and three columns: `ris` (the tag),
+#'   `bib` (the field name it conventionally carries), and `order` (an integer
+#'   giving the field's canonical position within a record, which is the order
+#'   [write_ris()] writes tags in).
 #'
-#' @return A data frame with columns `ris` (the tag) and `bib` (the field
-#'   name). Several tags may share a field name: those are the ones
-#'   `read_ris(rename_columns = TRUE)` merges. For `type = "ris"` only, a third
-#'   integer column `order` gives the canonical position of each field within a
-#'   record, which is the order [write_ris()] writes tags in.
-#'
-#'   Note that `type = "ris"` contains the tag `ED` twice, mapped to both
-#'   `editor` and `edition`, so every `ED` line in a file is read as two
-#'   fields. See the notes in `README.md`.
+#'   Several tags can share a field name — seven map to `journal`, three to
+#'   `pages` — which is why [read_ris()] keeps them apart rather than merging
+#'   them. `ED` appears twice, mapped to both `editor` and `edition`; the
+#'   ambiguity is real and is left for the caller to resolve.
 #'
 #' @examples
-#' head(ris_tag_lookup("ris"))
-#' nrow(ris_tag_lookup("wos"))
+#' head(ris_tag_lookup())
+#'
+#' # what field does M3 conventionally hold?
+#' tags <- ris_tag_lookup()
+#' tags[tags$ris == "M3", ]
+#'
+#' # which tags can carry the journal title?
+#' tags$ris[tags$bib == "journal"]
 #'
 #' @export
-ris_tag_lookup <- function(type = c("ris", "ris_write", "medline", "wos")) {
-  type <- match.arg(type)
-  tag_list <- ris_tag_definitions()[[type]]
+ris_tag_lookup <- function() {
+  tag_list <- ris_tag_definitions()$ris
 
   lengths_vec <- lengths(tag_list)
   result <- data.frame(
@@ -269,11 +92,9 @@ ris_tag_lookup <- function(type = c("ris", "ris_write", "medline", "wos")) {
   )
   rownames(result) <- NULL
 
-  # the 'order' column exists only for "ris": it is the field's position in
-  # the definition list, and drives the canonical field order of a record
-  if (type == "ris") {
-    result$order <- rep(seq_along(tag_list), lengths_vec)
-  }
+  # 'order' is the field's position in the definition list, which drives the
+  # canonical field order write_ris() emits
+  result$order <- rep(seq_along(tag_list), lengths_vec)
 
   result
 }

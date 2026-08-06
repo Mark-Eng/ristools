@@ -14,8 +14,9 @@ ris_to_df(x, delimiter = ris_sep())
 Defaults to \code{\link[=ris_sep]{ris_sep()}}.}
 }
 \value{
-A data frame with a \code{label} column followed by one column per field
-found anywhere in \code{x}. Records lacking a field get \code{NA}.
+A data frame with one column per field found anywhere in \code{x}, in the
+order fields are first seen. Records lacking a field get \code{NA}. The record
+names of \code{x} are not added as a column; use \code{names(x)} for those.
 }
 \description{
 Collapses a \code{ris_records} list into a data frame with one row per record,
@@ -25,16 +26,13 @@ joining multi-value fields with \code{delimiter}.
 The round trip through \code{\link[=df_to_ris]{df_to_ris()}} is exact as long as \code{delimiter} does
 not occur in the data, which is why \code{\link[=ris_sep]{ris_sep()}} is the default. A custom
 delimiter that appears inside a real value will not split back correctly.
-
-Columns appear in the order fields are first seen across \code{x}, except that
-where a mix of tag-named and semantically named fields is present, the
-tag-named ones are placed last.
 }
 \examples{
 recs <- structure(
   list(ref_1 = list(
-    title = "A study",
-    author = c("Smith, J.", "Jones, A.")
+    TY = "JOUR",
+    TI = "A study",
+    AU = c("Smith, J.", "Jones, A.")
   )),
   class = "ris_records"
 )

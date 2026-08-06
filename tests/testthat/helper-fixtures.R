@@ -84,8 +84,10 @@ wrapped_kw_expected <- function() {
   )
 }
 
-# a Web of Science .ciw record: two-character tags with a single space and no
-# hyphen, plus an indented continuation line
+# A Web of Science .ciw record: two-character tags with a single space and no
+# hyphen. Not a supported format -- it is here so the reader can be shown to
+# reject it rather than misparse it. Note it does carry an "ER" line, so it gets
+# past the record-terminator guard and fails on its tags instead.
 wos_ciw <- function() {
   c(
     "FN Clarivate Analytics Web of Science",
@@ -97,6 +99,20 @@ wos_ciw <- function() {
     "SO JOURNAL OF THINGS",
     "PY 2018",
     "ER",
+    ""
+  )
+}
+
+# A PubMed .nbib record: "PMID- " style tags, one space and no double space.
+# Also unsupported, and with no "ER" line at all.
+pubmed_nbib <- function() {
+  c(
+    "PMID- 29939999",
+    "TI  - A medline article",
+    "AB  - First line of the abstract",
+    "      second line of the abstract",
+    "AU  - Smith, John",
+    "DP  - 2018 Jun",
     ""
   )
 }

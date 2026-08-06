@@ -2,32 +2,34 @@
 % Please edit documentation in R/tag-lookup.R
 \name{ris_tag_lookup}
 \alias{ris_tag_lookup}
-\title{Look up the field name for each tag of a bibliographic format}
+\title{What each RIS tag conventionally means}
 \usage{
-ris_tag_lookup(type = c("ris", "ris_write", "medline", "wos"))
-}
-\arguments{
-\item{type}{One of \code{"ris"} (the default), \code{"ris_write"}, \code{"medline"} or
-\code{"wos"}.}
+ris_tag_lookup()
 }
 \value{
-A data frame with columns \code{ris} (the tag) and \code{bib} (the field
-name). Several tags may share a field name: those are the ones
-\code{read_ris(rename_columns = TRUE)} merges. For \code{type = "ris"} only, a third
-integer column \code{order} gives the canonical position of each field within a
-record, which is the order \code{\link[=write_ris]{write_ris()}} writes tags in.
+A data frame with one row per tag and three columns: \code{ris} (the tag),
+\code{bib} (the field name it conventionally carries), and \code{order} (an integer
+giving the field's canonical position within a record, which is the order
+\code{\link[=write_ris]{write_ris()}} writes tags in).
 
-Note that \code{type = "ris"} contains the tag \code{ED} twice, mapped to both
-\code{editor} and \code{edition}, so every \code{ED} line in a file is read as two
-fields. See the notes in \code{README.md}.
+Several tags can share a field name — seven map to \code{journal}, three to
+\code{pages} — which is why \code{\link[=read_ris]{read_ris()}} keeps them apart rather than merging
+them. \code{ED} appears twice, mapped to both \code{editor} and \code{edition}; the
+ambiguity is real and is left for the caller to resolve.
 }
 \description{
-Returns the tag-to-field mapping used when parsing a file of the given type.
-Useful for checking which field a tag is read as, and which tags
-\code{read_ris(rename_columns = TRUE)} merges into one column.
+Reference table of RIS tags and the field each conventionally holds.
+\code{\link[=read_ris]{read_ris()}} names its columns after the tags themselves, so this is the
+place to look up what a column such as \code{M3} or \code{U1} is.
 }
 \examples{
-head(ris_tag_lookup("ris"))
-nrow(ris_tag_lookup("wos"))
+head(ris_tag_lookup())
+
+# what field does M3 conventionally hold?
+tags <- ris_tag_lookup()
+tags[tags$ris == "M3", ]
+
+# which tags can carry the journal title?
+tags$ris[tags$bib == "journal"]
 
 }

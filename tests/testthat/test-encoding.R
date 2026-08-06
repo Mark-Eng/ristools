@@ -38,9 +38,9 @@ test_that("a BOM does not end up in the first field's value", {
   f <- write_bytes(paste0("﻿", utf8_record))
   on.exit(unlink(f))
 
-  df <- read_ris(f, rename_columns = TRUE)
-  expect_equal(df$type, "JOUR")
-  expect_false(grepl("﻿", df$type, fixed = TRUE))
+  df <- read_ris(f)
+  expect_equal(df$TY, "JOUR")
+  expect_false(grepl("﻿", df$TY, fixed = TRUE))
 })
 
 test_that("BOM and non-BOM versions of a file parse identically", {
@@ -71,19 +71,19 @@ test_that("UTF-8 text is not mojibaked", {
   f <- write_bytes(utf8_record)
   on.exit(unlink(f))
 
-  df <- read_ris(f, rename_columns = TRUE)
+  df <- read_ris(f)
 
-  expect_true(grepl("socio‐economic", df$title, fixed = TRUE))
+  expect_true(grepl("socio‐economic", df$TI, fixed = TRUE))
   # the classic mojibake signature: "a" + euro sign
-  expect_false(grepl("â€", df$title))
+  expect_false(grepl("â€", df$TI))
 })
 
 test_that("accented author names survive", {
   f <- write_bytes(utf8_record)
   on.exit(unlink(f))
 
-  recs <- read_ris(f, return_df = FALSE, rename_columns = TRUE)
-  authors <- recs[[1]]$author
+  recs <- read_ris(f, return_df = FALSE)
+  authors <- recs[[1]]$AU
 
   expect_length(authors, 3)
   expect_true(any(grepl("Gonçalves", authors)))
@@ -103,14 +103,15 @@ test_that("latin1 files still read correctly", {
   f <- write_bytes(latin1_bytes)
   on.exit(unlink(f))
 
-  df <- read_ris(f, rename_columns = TRUE)
+  df <- read_ris(f)
   expect_equal(nrow(df), 1)
-  expect_true(grepl("Café", df$title))
+  expect_true(grepl("Café", df$TI))
 })
 
-test_that("reading a file with non-ASCII labels raises no warnings", {
-  # rbind() took row names from the record labels and warned once per record
-  # that it could not translate them to the native encoding
+test_that("reading a file of non-ASCII records raises no warnings", {
+  # rbind() took row names from the record names and warned once per record
+  # that it could not translate them to the native encoding. ris_to_df() drops
+  # those names before the rbind() for this reason.
   body <- paste(rep(utf8_record, 3), collapse = "")
   f <- write_bytes(body)
   on.exit(unlink(f))
@@ -123,10 +124,10 @@ test_that("non-ASCII text survives a full round trip", {
   f2 <- tempfile(fileext = ".ris")
   on.exit(unlink(c(f1, f2)))
 
-  d1 <- read_ris(f1, rename_columns = TRUE)
+  d1 <- read_ris(f1)
   write_ris(d1, f2)
-  d2 <- read_ris(f2, rename_columns = TRUE)
+  d2 <- read_ris(f2)
 
-  expect_equal(d1$title, d2$title)
-  expect_equal(d1$author, d2$author)
+  expect_equal(d1$TI, d2$TI)
+  expect_equal(d1$AU, d2$AU)
 })
