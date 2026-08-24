@@ -70,10 +70,30 @@ are mapped to tags by \code{dialect}, or by \code{tag_map} where given. A field
 holding several values becomes one line per value, repeating the tag.
 
 A field with no entry in the tag map is written under its own name if that
-name is already a RIS tag, which is what lets the raw-tag output of
-\code{\link[=read_ris]{read_ris()}} round-trip unchanged. Anything genuinely unwritable is dropped
-with one warning naming the fields. The \code{label} and \code{filename} columns that
-\code{\link[=read_ris]{read_ris()}} adds are not written.
+name is one of \code{\link[=ris_valid_tags]{ris_valid_tags()}}, which is what lets the raw-tag output of
+\code{\link[=read_ris]{read_ris()}} round-trip unchanged. So a column reaches the file if
+\code{tag_map} names it, or the dialect maps it, or it is already a valid tag.
+
+Anything else is dropped, with one warning naming the columns:
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{The following columns are not named with valid RIS tags; they have been
+excluded from your RIS file: display_name, referenced_works, is_oa
+}\if{html}{\out{</div>}}
+
+This is what makes it safe to write a data frame that did not come from
+\code{\link[=read_ris]{read_ris()}} — \code{\link[=oa2df]{oa2df()}} output, a spreadsheet, an API response — since the
+columns with no RIS meaning simply do not appear. The check is against a
+fixed list rather than a shape pattern, so a plausible-looking but invalid
+name such as \code{TITL} or \code{SDG1} is dropped too, and a column called \code{ER} can
+no longer emit a record terminator into the middle of a record. Use
+\code{tag_map} to force any of those through.
+
+Dropping happens before values are read, so a list column — which would
+otherwise be deparsed into the file as \code{list(id = c(...), ...)} — cannot
+reach it. A column that holds a list or a nested table is dropped on those
+grounds even when its name \emph{is} a valid tag, with its own warning, since a
+correct name says nothing about the contents. The \code{label} and \code{filename}
+columns that \code{\link[=read_ris]{read_ris()}} adds are never written.
 
 RIS output uses CRLF line endings and no quoting, as RIS consumers expect.
 }
@@ -94,5 +114,6 @@ unlink(f)
 
 }
 \seealso{
-\code{\link[=read_ris]{read_ris()}} to read files back in.
+\code{\link[=read_ris]{read_ris()}} to read files back in, \code{\link[=ris_valid_tags]{ris_valid_tags()}} for the
+tags that may be written, \code{\link[=oa2df]{oa2df()}} to build a data frame from OpenAlex.
 }

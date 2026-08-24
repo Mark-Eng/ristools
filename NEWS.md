@@ -1,3 +1,101 @@
+# ristools 0.4.0
+
+This release adds a path from OpenAlex into RIS, and tightens what
+`write_ris()` will put in a file.
+
+## New features
+
+* **`oa2df()` reads OpenAlex works into a flat data frame.** It accepts a list
+  of work records (`openalexR::oa_request()` output, or
+  `jsonlite::fromJSON(simplifyVector = FALSE)`), a whole API response with its
+  `meta`/`results` envelope, a list of those from a paged fetch, a single work,
+  a path to a `.json` file, or a JSON string.
+
+  The five OpenAlex fields holding arrays of objects — `authorships`,
+  `concepts`, `topics`, `keywords` and `sustainable_development_goals` —
+  become one column each, holding the `display_name` of every entry joined
+  with `ris_sep()`. Since that is the delimiter `write_ris()` splits on, a
+  five-author paper writes five `AU` lines with no further work. **Every
+  column is an atomic vector**; there are no list columns.
+
+  `openalexR::oa2df()` is the reference implementation, and returns those five
+  fields as nested tibbles, which `write_ris()` cannot write: it coerces every
+  column with `as.character()`, so a nested tibble is deparsed into the file as
+  `list(id = c(...), display_name = c(...))` and a nested `NA` becomes the
+  literal string `"NA"`. The collapse has to happen while the values are still
+  a character vector, which is why this is a separate reader rather than a
+  wrapper around that one. `?oa2df` lists the differences in full.
+
+* **`oa2ristags()` renames those columns to RIS tags**, and rewrites the values
+  whose tags mean something narrower: `type` is recoded to a RIS reference
+  type, `id` and `doi` lose their URL prefixes, `cited_by_count` is prefixed
+  `"Cited by: "` for `N1`, and `sustainable_development_goals` is prefixed
+  `"SDGs: "` for `U3`. Author names are inverted to `"Aria, Massimo"` unless
+  `invert_authors = FALSE`.
+
+  `oa2df(ris_tags = TRUE)` calls it, so this is one implementation with two
+  entry points rather than two implementations that can drift apart.
+
+* **`oa_ris_tags()` and `oa_ris_types()`** expose the two mapping tables, in
+  the same spirit as `ris_tag_lookup()`.
+
+* **`ris_valid_tags()`** is the whitelist of tags `write_ris()` will write.
+
+## Breaking changes
+
+* **`write_ris()` drops columns that neither are, nor map to, valid RIS tags**,
+  naming them in one warning:
+
+  ```
+  The following columns are not named with valid RIS tags; they have been
+  excluded from your RIS file: display_name, referenced_works, is_oa
+  ```
+
+  A column reaches the file if `tag_map` names it, or the dialect maps it, or
+  it is already one of `ris_valid_tags()`. The whitelist is applied **after**
+  the field-to-tag mapping, so semantically named columns — `author`, `title`,
+  `year`, the names a BibTeX read produces — still write exactly as before.
+
+  What changes is the pass-through check. It was the shape pattern
+  `"^[A-Z][A-Z0-9]{1,3}$"`, which accepts any two-to-four character uppercase
+  token, so a column called `TITL` wrote `TITL  - ...`, and a column called
+  `ER` wrote a second `ER  -` into the middle of a record, splitting it in two
+  for every reader downstream. `ER` is deliberately not on the whitelist. Use
+  `tag_map` to force through a tag that is not on it.
+
+* **The warning text changed.** Code matching on `"no RIS tag for the
+  following field(s)"` needs updating.
+
+* **`jsonlite` is now a dependency.** The package no longer depends only on
+  base R.
+
+## Fixes
+
+* `write_ris()` no longer deparses a list column into a file. Dropping happens
+  before values are coerced, so a column that cannot be written correctly can
+  no longer be mangled into the file instead. This also fixes a list column
+  holding a scalar `NA` being written as the literal string `"NA"`, which the
+  `is.na()` filter in `clean_entry()` could not see because it was a real
+  string by then.
+
+* A column holding a list or a nested table is now dropped whatever its name,
+  with its own warning. The name check alone could not catch this:
+  `openalexR::oa2df()` calls its nested tibble of keyword objects `keywords`,
+  which maps to `KW` correctly and then deparsed into the file anyway.
+
+* `DA` and `U2`–`U5` have places in the canonical tag order, rather than
+  sorting to the end of the record after `N1`.
+
+## Internals
+
+* Tag resolution lives in one place, `resolve_ris_tags()`. `write_ris()`
+  consults it to decide what to warn about and drop, and `entry_to_ris()` to
+  decide what to emit; while they each did their own resolution the two could
+  disagree about a field.
+
+* `inst/notes/openalex-and-the-tag-whitelist.md` records the decisions behind
+  this release that the code cannot state for itself.
+
 # ristools 0.3.0
 
 This release narrows the package to what it is for: reading and writing RIS
