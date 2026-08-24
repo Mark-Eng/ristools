@@ -62,9 +62,10 @@ ris_write_tags <- function(dialect = c("ovid", "generic")) {
   # order and is written after these, immediately before ER
   tag_order <- c(
     "TY", "DB", "ID", "T1", "TI", "T2", "T3", "A1", "AU", "A2", "A3", "AF",
-    "Y1", "PY", "Y2", "N2", "AB", "M3", "KW", "DE", "JF", "JO", "JA", "JT",
-    "SO", "VL", "IS", "SP", "BP", "EP", "PB", "SN", "DO", "DI", "PT", "UR",
-    "AN", "CY", "PP", "AD", "ED", "ET", "LA", "U1", "CN", "C1", "N1"
+    "Y1", "PY", "Y2", "DA", "N2", "AB", "M3", "KW", "DE", "JF", "JO", "JA",
+    "JT", "SO", "VL", "IS", "SP", "BP", "EP", "PB", "SN", "DO", "DI", "PT",
+    "UR", "AN", "CY", "PP", "AD", "ED", "ET", "LA", "U1", "U2", "U3", "U4",
+    "U5", "CN", "C1", "N1"
   )
 
   list(
@@ -81,11 +82,54 @@ ris_write_tags <- function(dialect = c("ovid", "generic")) {
 # field name -> RIS tag for fields that were passed through untouched on read
 # (DB, ID, M3, PT, Y2 ...). clean_ris_names() lower-cases names that are not
 # tag-shaped, so "m3"/"y2" have to be recognised as well as "DB"/"ID"/"PT".
+# The name is checked against ris_valid_tags() rather than against a shape
+# pattern. That pattern was "^[A-Z][A-Z0-9]{1,3}$", which accepts any two to
+# four character uppercase token: a column called TITL wrote "TITL  - ...",
+# and a column called ER wrote a second "ER  -" into the middle of a record,
+# splitting it in two for every reader downstream.
 as_ris_tag <- function(field) {
   up <- toupper(field)
-  ok <- grepl("^[A-Z][A-Z0-9]{1,3}$", up) &
+  ok <- up %in% ris_valid_tags() &
     (grepl("[0-9]", field) | field == up)
   ifelse(ok, up, NA_character_)
+}
+
+
+# field names -> RIS tags, NA where a field has no RIS representation.
+#
+# The single place this decision is made. write_ris() consults it to decide
+# what to warn about and drop, entry_to_ris() to decide what to emit. While
+# they each did their own resolution the two could disagree about a field.
+#
+# Precedence: the tag map first (dialect defaults, with any tag_map overrides
+# already merged in), then the field name itself if it is already a valid tag.
+# So a semantically named column -- author, title, year, the names a BibTeX
+# read produces -- still maps, and only names resolving to nothing are dropped.
+resolve_ris_tags <- function(field, lookup) {
+  tag <- lookup$map$ris[match(tolower(field), tolower(lookup$map$bib))]
+  na_tag <- is.na(tag)
+  if (any(na_tag)) {
+    tag[na_tag] <- as_ris_tag(field[na_tag])
+  }
+  tag
+}
+
+
+# One warning naming every column that will not reach the file, one per line.
+#
+# A comma-separated list ran together once it was more than a few names long,
+# and that is the normal case rather than the exception: oa2df() output has
+# forty columns, twenty of which have no RIS tag, so the list is what the
+# reader actually has to scan.
+warn_dropped_columns <- function(columns, reason, advice = NULL) {
+  warning(
+    "The following columns ",
+    reason,
+    "; they have been excluded from your RIS file:\n",
+    paste0("  ", columns, collapse = "\n"),
+    if (!is.null(advice)) paste0("\n", advice),
+    call. = FALSE
+  )
 }
 
 
@@ -211,12 +255,8 @@ entry_to_ris <- function(
   }
 
   # field name -> tag, falling back to pass-through tags (DB, ID, M3, PT ...)
-  z$tag <- lookup$map$ris[match(tolower(z$field), tolower(lookup$map$bib))]
-  na_tag <- is.na(z$tag)
-  if (any(na_tag)) {
-    z$tag[na_tag] <- as_ris_tag(z$field[na_tag])
-    z <- z[!is.na(z$tag), ]
-  }
+  z$tag <- resolve_ris_tags(z$field, lookup)
+  z <- z[!is.na(z$tag), ]
   if (nrow(z) == 0) {
     return(character(0))
   }
@@ -279,8 +319,16 @@ entry_to_ris <- function(
 #'   `""`, which writes the year exactly as given, so a file read by
 #'   [read_ris()] writes back unchanged. Pass `"//"` for the `"2020//"` form
 #'   that Ovid exports use.
-#' @param blank_line If `TRUE`, add an empty line after each `ER`.
+#' @param blank_line If `TRUE` (the default), add an empty line after each
+#'   `ER`, which makes the records easy to tell apart when reading the file.
+#'   Pass `FALSE` to write one record straight after another.
 #' @param eol Line ending. Defaults to `"\r\n"` for RIS and `"\n"` for BibTeX.
+#' @param warn_dropped If `TRUE` (the default), warn about columns that were
+#'   excluded from the file — both those with no RIS tag and those holding a
+#'   list or nested table. Pass `FALSE` where the drop is expected and the
+#'   warning is noise, such as writing [oa2df()] output, which carries twenty
+#'   or so columns with no RIS equivalent by design. Columns are dropped either
+#'   way; this only controls whether you are told.
 #'
 #' @return The filename, invisibly.
 #'
@@ -290,12 +338,40 @@ entry_to_ris <- function(
 #' holding several values becomes one line per value, repeating the tag.
 #'
 #' A field with no entry in the tag map is written under its own name if that
-#' name is already a RIS tag, which is what lets the raw-tag output of
-#' [read_ris()] round-trip unchanged. Anything genuinely unwritable is dropped
-#' with one warning naming the fields. The `label` and `filename` columns that
-#' [read_ris()] adds are not written.
+#' name is one of [ris_valid_tags()], which is what lets the raw-tag output of
+#' [read_ris()] round-trip unchanged. So a column reaches the file if
+#' `tag_map` names it, or the dialect maps it, or it is already a valid tag.
+#'
+#' Anything else is dropped, with one warning listing the columns:
+#'
+#' ```
+#' The following columns are not named with valid RIS tags; they have been
+#' excluded from your RIS file:
+#'   display_name
+#'   referenced_works
+#'   is_oa
+#' ```
+#'
+#' Set `warn_dropped = FALSE` to drop them silently.
+#'
+#' This is what makes it safe to write a data frame that did not come from
+#' [read_ris()] — [oa2df()] output, a spreadsheet, an API response — since the
+#' columns with no RIS meaning simply do not appear. The check is against a
+#' fixed list rather than a shape pattern, so a plausible-looking but invalid
+#' name such as `TITL` or `SDG1` is dropped too, and a column called `ER` can
+#' no longer emit a record terminator into the middle of a record. Use
+#' `tag_map` to force any of those through.
+#'
+#' Dropping happens before values are read, so a list column — which would
+#' otherwise be deparsed into the file as `list(id = c(...), ...)` — cannot
+#' reach it. A column that holds a list or a nested table is dropped on those
+#' grounds even when its name *is* a valid tag, with its own warning, since a
+#' correct name says nothing about the contents. The `label` and `filename`
+#' columns that [read_ris()] adds are never written.
 #'
 #' RIS output uses CRLF line endings and no quoting, as RIS consumers expect.
+#' Records are separated by a blank line; see `blank_line`. The blank line is
+#' cosmetic — [read_ris()] ignores it, so it does not affect a round trip.
 #'
 #' @examples
 #' df <- data.frame(
@@ -312,7 +388,8 @@ entry_to_ris <- function(
 #' cat(readLines(f), sep = "\n")
 #' unlink(f)
 #'
-#' @seealso [read_ris()] to read files back in.
+#' @seealso [read_ris()] to read files back in, [ris_valid_tags()] for the
+#'   tags that may be written, [oa2df()] to build a data frame from OpenAlex.
 #'
 #' @export
 write_ris <- function(
@@ -325,8 +402,9 @@ write_ris <- function(
   order_tags = TRUE,
   journal_from_position = FALSE,
   year_suffix = NULL,
-  blank_line = FALSE,
-  eol = NULL
+  blank_line = TRUE,
+  eol = NULL,
+  warn_dropped = TRUE
 ) {
   if (missing(filename)) {
     stop("argument 'filename' is missing, with no default")
@@ -355,6 +433,70 @@ write_ris <- function(
   # values are only re-split when they were collapsed in the first place,
   # i.e. when x is a data.frame built by ris_to_df()
   resplit <- inherits(x, "data.frame")
+
+  lookup <- NULL
+  if (format == "ris") {
+    lookup <- ris_write_tags(dialect)
+    if (!is.null(tag_map)) {
+      # user-supplied field -> tag mapping wins; keep defaults not overridden
+      extra <- data.frame(
+        bib = names(tag_map),
+        ris = unname(unlist(tag_map)),
+        stringsAsFactors = FALSE
+      )
+      keep <- !(tolower(lookup$map$bib) %in% tolower(extra$bib))
+      lookup$map <- rbind(extra, lookup$map[keep, ])
+      # new tags keep their canonical slot if they have one, otherwise they
+      # are written after the tags that do
+      lookup$order <- unique(c(lookup$order, extra$ris))
+    }
+
+    # Anything with no RIS representation is dropped, with one warning naming
+    # it. This runs *before* prepare_entries(), which coerces every column
+    # with as.character(). A list column reaching that call is deparsed into
+    # the file as "list(id = c(...), display_name = c(...))", and a list column
+    # holding a scalar NA becomes the literal string "NA" -- neither of which
+    # the NA filter in clean_entry() can see, because both are real strings by
+    # then. Dropping first means a column that cannot be written correctly
+    # cannot be mangled into the file either.
+    fields <- if (resplit) {
+      colnames(x)
+    } else {
+      unique(unlist(lapply(unclass(x), names)))
+    }
+    # pages/page become startpage/endpage in entry_to_ris(); label and
+    # filename are read_ris() bookkeeping and are never written
+    fields <- setdiff(fields, c("label", "filename", "pages", "page"))
+    unmapped <- fields[is.na(resolve_ris_tags(fields, lookup))]
+    if (length(unmapped) > 0) {
+      if (warn_dropped) {
+        warn_dropped_columns(unmapped, "are not named with valid RIS tags")
+      }
+      if (resplit) {
+        x <- x[, !(colnames(x) %in% unmapped), drop = FALSE]
+      }
+    }
+
+    # A column can have a perfectly good tag and still hold something that is
+    # not a value: openalexR::oa2df() names a nested tibble of keyword objects
+    # "keywords", which maps to KW and then deparses into the file as
+    # "KW  - list(id = c(...), display_name = c(...))". The name check cannot
+    # catch that, because the name is right and the contents are not.
+    if (resplit && ncol(x) > 0) {
+      nested <- !vapply(x, is.atomic, logical(1))
+      if (any(nested)) {
+        if (warn_dropped) {
+          warn_dropped_columns(
+            colnames(x)[nested],
+            "hold lists or nested tables rather than single values",
+            "Collapse them to delimited strings first (see oa2df())."
+          )
+        }
+        x <- x[, !nested, drop = FALSE]
+      }
+    }
+  }
+
   entries <- prepare_entries(x, delimiter, resplit)
 
   if (format == "bib") {
@@ -392,43 +534,6 @@ write_ris <- function(
   }
 
   if (format == "ris") {
-    lookup <- ris_write_tags(dialect)
-    if (!is.null(tag_map)) {
-      # user-supplied field -> tag mapping wins; keep defaults not overridden
-      extra <- data.frame(
-        bib = names(tag_map),
-        ris = unname(unlist(tag_map)),
-        stringsAsFactors = FALSE
-      )
-      keep <- !(tolower(lookup$map$bib) %in% tolower(extra$bib))
-      lookup$map <- rbind(extra, lookup$map[keep, ])
-      # new tags keep their canonical slot if they have one, otherwise they
-      # are written after the tags that do
-      lookup$order <- unique(c(lookup$order, extra$ris))
-    }
-
-    # warn once about anything that has no RIS representation
-    all_fields <- setdiff(
-      unique(unlist(lapply(entries, names))),
-      c("pages", "page")
-    )
-    if (length(all_fields) > 0) {
-      unmapped <- all_fields[
-        is.na(lookup$map$ris[match(
-          tolower(all_fields),
-          tolower(lookup$map$bib)
-        )]) &
-          is.na(as_ris_tag(all_fields))
-      ]
-      if (length(unmapped) > 0) {
-        warning(
-          "no RIS tag for the following field(s), which were not exported: ",
-          paste(unmapped, collapse = ", "),
-          call. = FALSE
-        )
-      }
-    }
-
     export <- unlist(
       lapply(
         entries,

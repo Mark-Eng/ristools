@@ -1,0 +1,216 @@
+{
+  "meta": { "count": 4, "page": 1, "per_page": 25 },
+  "results": [
+    {
+      "id": "https://openalex.org/W2755950973",
+      "doi": "https://doi.org/10.1016/j.joi.2017.08.007",
+      "title": "bibliometrix: An R-tool for comprehensive science mapping analysis",
+      "display_name": "bibliometrix: An R-tool for comprehensive science mapping analysis",
+      "publication_year": 2017,
+      "publication_date": "2017-11-01",
+      "language": "en",
+      "type": "article",
+      "cited_by_count": 9999,
+      "is_retracted": false,
+      "is_paratext": false,
+      "fwci": 12.5,
+      "primary_location": {
+        "is_oa": false,
+        "landing_page_url": "https://doi.org/10.1016/j.joi.2017.08.007",
+        "pdf_url": null,
+        "license": null,
+        "version": "publishedVersion",
+        "source": {
+          "id": "https://openalex.org/S49861241",
+          "display_name": "Journal of Informetrics",
+          "issn_l": "1751-1577",
+          "host_organization": "https://openalex.org/P4310320990",
+          "host_organization_name": "Elsevier BV"
+        }
+      },
+      "open_access": {
+        "is_oa": false,
+        "oa_status": "closed",
+        "oa_url": null,
+        "any_repository_has_fulltext": true
+      },
+      "authorships": [
+        {
+          "author_position": "first",
+          "author": {
+            "id": "https://openalex.org/A5048491430",
+            "display_name": "Massimo Aria",
+            "orcid": "https://orcid.org/0000-0002-8517-9411"
+          },
+          "is_corresponding": true
+        },
+        {
+          "author_position": "middle",
+          "author": {
+            "id": "https://openalex.org/A5000000002",
+            "display_name": "Ludo van der Berg",
+            "orcid": null
+          },
+          "is_corresponding": false
+        },
+        {
+          "author_position": "last",
+          "author": {
+            "id": "https://openalex.org/A5044713553",
+            "display_name": "Cuccurullo, Corrado",
+            "orcid": null
+          },
+          "is_corresponding": false
+        }
+      ],
+      "biblio": {
+        "volume": "11",
+        "issue": "4",
+        "first_page": "959",
+        "last_page": "975"
+      },
+      "concepts": [
+        {
+          "id": "https://openalex.org/C2778805511",
+          "display_name": "Citation",
+          "level": 2,
+          "score": 0.71
+        },
+        {
+          "id": "https://openalex.org/C41008148",
+          "display_name": "Computer science",
+          "level": 0,
+          "score": 0.42
+        }
+      ],
+      "keywords": [
+        {
+          "id": "https://openalex.org/keywords/science-mapping",
+          "display_name": "Science Mapping",
+          "score": 0.62
+        },
+        {
+          "id": "https://openalex.org/keywords/bibliometrics",
+          "display_name": "Bibliometrics",
+          "score": 0.55
+        }
+      ],
+      "topics": [
+        {
+          "id": "https://openalex.org/T10102",
+          "display_name": "Scientometrics and Bibliometrics Research",
+          "score": 0.9998,
+          "subfield": {
+            "id": "https://openalex.org/subfields/3309",
+            "display_name": "Library and Information Sciences"
+          },
+          "field": {
+            "id": "https://openalex.org/fields/33",
+            "display_name": "Social Sciences"
+          },
+          "domain": {
+            "id": "https://openalex.org/domains/2",
+            "display_name": "Social Sciences"
+          }
+        },
+        {
+          "id": "https://openalex.org/T11717",
+          "display_name": "Data Analysis with R",
+          "score": 0.9721,
+          "subfield": {
+            "id": "https://openalex.org/subfields/3309",
+            "display_name": "Library and Information Sciences"
+          },
+          "field": {
+            "id": "https://openalex.org/fields/17",
+            "display_name": "Computer Science"
+          },
+          "domain": {
+            "id": "https://openalex.org/domains/3",
+            "display_name": "Physical Sciences"
+          }
+        }
+      ],
+      "sustainable_development_goals": [
+        {
+          "id": "https://metadata.un.org/sdg/4",
+          "display_name": "Quality education",
+          "score": 0.51
+        },
+        {
+          "id": "https://metadata.un.org/sdg/9",
+          "display_name": "Industry, innovation and infrastructure",
+          "score": 0.13
+        }
+      ],
+      "referenced_works": [
+        "https://openalex.org/W1234",
+        "https://openalex.org/W5678"
+      ],
+      "referenced_works_count": 2,
+      "related_works": ["https://openalex.org/W9999"],
+      "abstract_inverted_index": {
+        "This": [0],
+        "paper": [1],
+        "describes": [2],
+        "bibliometrix.": [3]
+      }
+    },
+    {
+      "id": "https://openalex.org/W3000000001",
+      "doi": null,
+      "title": "A chapter whose every list field is empty",
+      "display_name": "A chapter whose every list field is empty",
+      "publication_year": 2021,
+      "publication_date": "2021-06-15",
+      "language": null,
+      "type": "book-chapter",
+      "cited_by_count": 0,
+      "is_retracted": false,
+      "is_paratext": false,
+      "primary_location": {
+        "is_oa": true,
+        "landing_page_url": "https://example.org/chapter",
+        "pdf_url": "https://example.org/chapter.pdf",
+        "license": "cc-by",
+        "version": "publishedVersion",
+        "source": {
+          "id": "https://openalex.org/S1",
+          "display_name": "Some Edited Volume",
+          "issn_l": null,
+          "host_organization": null,
+          "host_organization_name": null
+        }
+      },
+      "open_access": {
+        "is_oa": true,
+        "oa_status": "gold",
+        "oa_url": "https://example.org/chapter.pdf",
+        "any_repository_has_fulltext": false
+      },
+      "authorships": [],
+      "biblio": { "volume": null, "issue": null, "first_page": "1", "last_page": null },
+      "concepts": [],
+      "keywords": [],
+      "topics": [],
+      "sustainable_development_goals": [],
+      "referenced_works": [],
+      "referenced_works_count": 0,
+      "related_works": [],
+      "abstract_inverted_index": null
+    },
+    {
+      "id": "https://openalex.org/W4000000002",
+      "title": "A record with almost every field absent",
+      "publication_year": 2024,
+      "type": "peer-review"
+    },
+    {
+      "id": "https://openalex.org/W5000000003",
+      "title": "A work whose type OpenAlex has not published before",
+      "publication_year": 2026,
+      "type": "video-essay",
+      "keywords": [{ "keyword": "legacy keyword form", "score": 0.4 }]
+    }
+  ]
+}

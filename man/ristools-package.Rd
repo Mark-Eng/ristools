@@ -6,7 +6,7 @@
 \alias{ristools-package}
 \title{ristools: Faithful Reading and Writing of RIS and BibTeX Bibliographic Files}
 \description{
-Reads and writes RIS and BibTeX bibliographic files without the data loss that affects several existing implementations. A RIS file becomes a data frame whose columns are the file's own tags, so it can be inspected, edited and written back with nothing renamed, merged or reordered. Multiple values in a single field (authors, keywords, JEL descriptors, ISSNs) are joined with a delimiter that cannot occur in bibliographic text, making the conversion reversible. Also handles byte order marks, detects file encoding, and preserves trailing punctuation in titles and tags containing digits. Depends only on base R.
+Reads and writes RIS and BibTeX bibliographic files without the data loss that affects several existing implementations. A RIS file becomes a data frame whose columns are the file's own tags, so it can be inspected, edited and written back with nothing renamed, merged or reordered. Multiple values in a single field (authors, keywords, JEL descriptors, ISSNs) are joined with a delimiter that cannot occur in bibliographic text, making the conversion reversible. Also handles byte order marks, detects file encoding, and preserves trailing punctuation in titles and tags containing digits. OpenAlex works can be read from JSON into the same flat data frame and written out as RIS.
 }
 \author{
 \strong{Maintainer}: Mark Engelbert \email{mengelbert@3ieimpact.org}

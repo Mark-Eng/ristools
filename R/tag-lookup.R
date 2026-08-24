@@ -98,3 +98,79 @@ ris_tag_lookup <- function() {
 
   result
 }
+
+# ----------------------------------------------------------------------------
+#  The tag whitelist
+#
+#  Written as a literal rather than derived from ris_write_tags(), so that
+#  test-tag-lookup.R can assert the subset relationship and catch a mapping
+#  added to a tag that is not a real one.
+#
+#  "ER" is deliberately absent. It terminates a record rather than carrying a
+#  value, so a column named ER must never be written as data: doing so emits a
+#  stray "ER  -" mid-record and splits every record in two.
+# ----------------------------------------------------------------------------
+ris_tag_whitelist <- function() {
+  c(
+    "TY",
+    "A1", "A2", "A3", "A4", "A5", "AB", "AD", "AF", "AN", "AU", "AV",
+    "BP", "BT",
+    "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "CA", "CN", "CP",
+    "CT", "CY",
+    "DA", "DB", "DE", "DI", "DO", "DP",
+    "ED", "EP", "ET",
+    "ID", "IS",
+    "J1", "J2", "JA", "JF", "JO", "JT",
+    "KW",
+    "L1", "L2", "L3", "L4", "LA", "LB", "LK",
+    "M1", "M2", "M3",
+    "N1", "N2", "NV",
+    "OP",
+    "PB", "PP", "PT", "PY",
+    "RI", "RN", "RP",
+    "SE", "SN", "SO", "SP", "ST",
+    "T1", "T2", "T3", "TA", "TI", "TT",
+    "U1", "U2", "U3", "U4", "U5", "UR",
+    "VL", "VO",
+    "WP", "WT",
+    "Y1", "Y2"
+  )
+}
+
+
+#' Which tags [write_ris()] will write
+#'
+#' The whitelist of RIS tags [write_ris()] accepts. A column whose name is not
+#' one of these, and which the tag map does not translate into one, is dropped
+#' from the output with a warning.
+#'
+#' @return A sorted character vector of RIS tags.
+#'
+#' @details
+#' This matters when the data frame did not come from [read_ris()]. Records
+#' converted from another source — [oa2df()] output, a spreadsheet, an API
+#' response — carry column names that are not tags, and writing those verbatim
+#' would produce a file no RIS reader can parse. Checking against a fixed list
+#' rather than a shape pattern also stops a plausible-looking but invalid name
+#' such as `TITL` or `SDG1` from reaching the file.
+#'
+#' `ER` is **not** on the list. It ends a record rather than holding a value,
+#' so a column named `ER` would split every record in two.
+#'
+#' To write a tag that is not here, map to it explicitly with `write_ris()`'s
+#' `tag_map` argument, which is checked before the whitelist.
+#'
+#' @examples
+#' head(ris_valid_tags(), 20)
+#'
+#' # is this column name writable?
+#' "U3" %in% ris_valid_tags()
+#' "SDG1" %in% ris_valid_tags()
+#'
+#' @seealso [ris_tag_lookup()] for what each tag conventionally means,
+#'   [write_ris()] for the drop-and-warn behaviour.
+#'
+#' @export
+ris_valid_tags <- function() {
+  sort(unique(ris_tag_whitelist()))
+}

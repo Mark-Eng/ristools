@@ -14,8 +14,9 @@ write_ris(
   order_tags = TRUE,
   journal_from_position = FALSE,
   year_suffix = NULL,
-  blank_line = FALSE,
-  eol = NULL
+  blank_line = TRUE,
+  eol = NULL,
+  warn_dropped = TRUE
 )
 }
 \arguments{
@@ -54,9 +55,18 @@ discards the source tag.}
 \code{\link[=read_ris]{read_ris()}} writes back unchanged. Pass \code{"//"} for the \code{"2020//"} form
 that Ovid exports use.}
 
-\item{blank_line}{If \code{TRUE}, add an empty line after each \code{ER}.}
+\item{blank_line}{If \code{TRUE} (the default), add an empty line after each
+\code{ER}, which makes the records easy to tell apart when reading the file.
+Pass \code{FALSE} to write one record straight after another.}
 
 \item{eol}{Line ending. Defaults to \code{"\\r\\n"} for RIS and \code{"\\n"} for BibTeX.}
+
+\item{warn_dropped}{If \code{TRUE} (the default), warn about columns that were
+excluded from the file — both those with no RIS tag and those holding a
+list or nested table. Pass \code{FALSE} where the drop is expected and the
+warning is noise, such as writing \code{\link[=oa2df]{oa2df()}} output, which carries twenty
+or so columns with no RIS equivalent by design. Columns are dropped either
+way; this only controls whether you are told.}
 }
 \value{
 The filename, invisibly.
@@ -70,12 +80,39 @@ are mapped to tags by \code{dialect}, or by \code{tag_map} where given. A field
 holding several values becomes one line per value, repeating the tag.
 
 A field with no entry in the tag map is written under its own name if that
-name is already a RIS tag, which is what lets the raw-tag output of
-\code{\link[=read_ris]{read_ris()}} round-trip unchanged. Anything genuinely unwritable is dropped
-with one warning naming the fields. The \code{label} and \code{filename} columns that
-\code{\link[=read_ris]{read_ris()}} adds are not written.
+name is one of \code{\link[=ris_valid_tags]{ris_valid_tags()}}, which is what lets the raw-tag output of
+\code{\link[=read_ris]{read_ris()}} round-trip unchanged. So a column reaches the file if
+\code{tag_map} names it, or the dialect maps it, or it is already a valid tag.
+
+Anything else is dropped, with one warning listing the columns:
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{The following columns are not named with valid RIS tags; they have been
+excluded from your RIS file:
+  display_name
+  referenced_works
+  is_oa
+}\if{html}{\out{</div>}}
+
+Set \code{warn_dropped = FALSE} to drop them silently.
+
+This is what makes it safe to write a data frame that did not come from
+\code{\link[=read_ris]{read_ris()}} — \code{\link[=oa2df]{oa2df()}} output, a spreadsheet, an API response — since the
+columns with no RIS meaning simply do not appear. The check is against a
+fixed list rather than a shape pattern, so a plausible-looking but invalid
+name such as \code{TITL} or \code{SDG1} is dropped too, and a column called \code{ER} can
+no longer emit a record terminator into the middle of a record. Use
+\code{tag_map} to force any of those through.
+
+Dropping happens before values are read, so a list column — which would
+otherwise be deparsed into the file as \code{list(id = c(...), ...)} — cannot
+reach it. A column that holds a list or a nested table is dropped on those
+grounds even when its name \emph{is} a valid tag, with its own warning, since a
+correct name says nothing about the contents. The \code{label} and \code{filename}
+columns that \code{\link[=read_ris]{read_ris()}} adds are never written.
 
 RIS output uses CRLF line endings and no quoting, as RIS consumers expect.
+Records are separated by a blank line; see \code{blank_line}. The blank line is
+cosmetic — \code{\link[=read_ris]{read_ris()}} ignores it, so it does not affect a round trip.
 }
 \examples{
 df <- data.frame(
@@ -94,5 +131,6 @@ unlink(f)
 
 }
 \seealso{
-\code{\link[=read_ris]{read_ris()}} to read files back in.
+\code{\link[=read_ris]{read_ris()}} to read files back in, \code{\link[=ris_valid_tags]{ris_valid_tags()}} for the
+tags that may be written, \code{\link[=oa2df]{oa2df()}} to build a data frame from OpenAlex.
 }

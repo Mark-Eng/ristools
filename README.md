@@ -1,6 +1,6 @@
 # ristools
 
-A set of R tools for reading and writing bibliographic files in RIS format. Unlike general-purpose tools for evidence synthesis work (e.g., the `revtools` and `synthesisr` packages), `ristools` is specialised for RIS files, and prioritises preventing loss of information or structure when converting RIS files to dataframes and back.
+A set of R tools for reading and writing bibliographic files in RIS format, and for turning OpenAlex search results into them. Unlike general-purpose tools for evidence synthesis work (e.g., the `revtools` and `synthesisr` packages), `ristools` is specialised for RIS files, and prioritises preventing loss of information or structure when converting RIS files to dataframes and back.
 
 Reading a RIS file gives you a dataframe whose columns are the file's own tags — `TY`, `AU`, `TI`, `KW` — with nothing renamed, merged or reordered. So you can read a file, inspect and edit it as a table, and write it back out unchanged.
 
@@ -10,7 +10,7 @@ The package also includes a function to split large RIS files into smaller chunk
 
 ## Scope
 
-`ristools` reads and writes `.ris` files, and reads and writes BibTeX. Web of Science (`.ciw`) and PubMed (`.nbib`) exports tag their lines differently and are **not** supported: they are rejected with a message naming the format, rather than being misparsed into something that looks plausible. Support for them may be added later, with a tag pattern specific to each.
+`ristools` reads and writes `.ris` files, reads and writes BibTeX, and reads OpenAlex works from JSON. Web of Science (`.ciw`) and PubMed (`.nbib`) exports tag their lines differently and are **not** supported: they are rejected with a message naming the format, rather than being misparsed into something that looks plausible. Support for them may be added later, with a tag pattern specific to each.
 
 ## Installation
 
@@ -48,6 +48,10 @@ tags[tags$ris == "M3", ]
 
 # split a large export into importable chunks
 split_ris_file("huge_export.ris", "chunks/", set_size = 10000)
+
+# OpenAlex works -> dataframe with RIS tags for column names -> .ris
+oa <- oa2df("openalex_search.json", ris_tags = TRUE)
+write_ris(oa, "openalex.ris")
 ```
 
 ### Columns are the file's own tags
@@ -159,6 +163,130 @@ Chunks are named after the input file with the record range appended. Any parent
 
 Splitting works at the text level, not by parsing. Records are delimited by lines starting TY  -  and ER  -, and every line between them is copied verbatim. No field is read, mapped, or rewritten, so splitting cannot alter or lose data even in a file read_ris() would struggle with. The function stops rather than guessing if the file has no TY  -  lines, or if the TY/ER counts disagree — the latter usually means a truncated download or a record missing its terminator.
 
+## OpenAlex
+
+`oa2df()` reads OpenAlex works into a dataframe with no nested columns, and `oa2ristags()` renames those columns to RIS tags, so a search result can go straight to a `.ris` file:
+
+```r
+# a saved API response, a list from openalexR::oa_request(), a JSON string,
+# or a single work — all accepted
+df <- oa2df("openalex_search.json", ris_tags = TRUE)
+write_ris(df, "openalex.ris")
+```
+
+```
+TY  - JOUR
+ID  - W2755950973
+TI  - bibliometrix: An R-tool for comprehensive science mapping analysis
+AU  - Aria, Massimo
+AU  - Cuccurullo, Corrado
+PY  - 2017
+DA  - 2017-11-01
+AB  - This paper describes bibliometrix.
+KW  - Science Mapping
+KW  - Bibliometrics
+JO  - Journal of Informetrics
+VL  - 11
+IS  - 4
+SP  - 959
+EP  - 975
+SN  - 1751-1577
+DO  - 10.1016/j.joi.2017.08.007
+LA  - en
+U1  - Citation
+U2  - Scientometrics and Bibliometrics Research
+U3  - SDGs: Quality education
+N1  - Cited by: 9999
+ER  -
+```
+
+### Nested fields become delimited strings
+
+Five OpenAlex fields hold arrays of objects rather than single values. Each becomes one column holding the `display_name` of every entry, joined with `" | "` — the same delimiter `write_ris()` splits on, so a five-author paper writes five `AU` lines with nothing further to do.
+
+| OpenAlex field | RIS tag |
+|---|---|
+| `authorships` | `AU` |
+| `concepts` | `U1` |
+| `topics` | `U2` |
+| `keywords` | `KW` |
+| `sustainable_development_goals` | `U3` |
+
+`topics` needs a decision the others do not. Every topic OpenAlex assigns carries a `subfield`, `field` and `domain` alongside it, and the two broad levels are rarely what you want in a reference. `topic_levels` defaults to `c("topic", "subfield")` and drops them. It has to be set here rather than afterwards: once the column is a string, nothing is left to say which level a name came from.
+
+### Differences from `openalexR::oa2df()`
+
+`openalexR::oa2df()` is the reference implementation for this conversion, and returns those five fields as **nested tibbles** (`<tbl_df [5 x 7]>`). `write_ris()` cannot write those: it coerces every column with `as.character()`, so a nested tibble is deparsed into the file as `list(id = c(...), display_name = c(...))`, and a nested `NA` becomes the literal string `"NA"`. The collapse has to happen while the values are still a character vector, which is why this is a separate reader rather than a wrapper.
+
+Column names are the same, so most code transfers. What differs:
+
+| | |
+|---|---|
+| the five fields above | delimited strings, not nested tibbles |
+| `publication_date` | character `"2017-11-01"`, not a `Date` |
+| `referenced_works`, `related_works` | delimited strings |
+| the result | plain dataframe, not a tibble |
+| `ids`, `counts_by_year`, `apc`, `funders`, `awards` | not carried over — no RIS meaning and no atomic form |
+| entities | works only; use `openalexR::oa2df()` for authors, sources, … |
+
+`ristools::oa2df()` masks `openalexR::oa2df()` if both packages are attached — call it as `ristools::oa2df()` where both are in play.
+
+### Values that change on the way to RIS
+
+`oa2ristags()` rewrites values where a RIS tag means something narrower than the OpenAlex field:
+
+| Column | Tag | Change |
+|---|---|---|
+| `type` | `TY` | recoded to a RIS reference type (`article` → `JOUR`, `book-chapter` → `CHAP`, …) |
+| `id` | `ID` | `https://openalex.org/` stripped |
+| `doi` | `DO` | `https://doi.org/` stripped |
+| `cited_by_count` | `N1` | prefixed `"Cited by: "` |
+| `sustainable_development_goals` | `U3` | prefixed `"SDGs: "` |
+| `authorships` | `AU` | `"Massimo Aria"` → `"Aria, Massimo"` |
+
+A prefix labels *each* value, not the field as a whole, because `write_ris()` writes one line per value: a paper tagged with two SDGs gets two `U3` lines, each beginning `SDGs: `.
+
+`TY` is the one RIS tag with a closed vocabulary, so `article` cannot pass through unchanged. `oa_ris_types()` is the full table. A type not in it becomes `GEN` and is named in a warning, so a work type OpenAlex adds later never blocks a write but never passes unnoticed either.
+
+**Author inversion is a guess, and can be switched off.** A name containing a comma is left alone, a single token is left alone, a trailing `Jr`/`Sr`/`II`/`III`/`IV` stays with the family name, and a *lower-case* particle joins it — so `"Ludo van der Berg"` becomes `"van der Berg, Ludo"` while `"Della Rosa"` becomes `"Rosa, Della"`. The lower-case rule is the one BibTeX uses to find the "von" part of a name.
+
+What it cannot detect is a name OpenAlex already stores family-name first, which is common for Chinese and Korean authors: `"Wang Xiaoming"` is indistinguishable from a given-name-first name and is inverted wrongly. There is no signal in the data separating the two. Pass `invert_authors = FALSE` to leave every name exactly as OpenAlex supplied it.
+
+### Columns with no RIS equivalent
+
+`oa2df()` returns everything it reads, so most of its 40 columns have no RIS tag. They are kept rather than dropped, because `write_ris()` is the single place that decides what reaches a file:
+
+```r
+write_ris(df, "openalex.ris")
+#> Warning: The following columns are not named with valid RIS tags; they have
+#> been excluded from your RIS file:
+#>   display_name
+#>   relevance_score
+#>   fwci
+#>   is_oa
+#>   ...
+```
+
+That warning is the design, not a problem. Since it is expected here, `warn_dropped = FALSE` turns it off:
+
+```r
+write_ris(df, "openalex.ris", warn_dropped = FALSE)
+```
+
+The columns are dropped either way — the argument only controls whether you are told. Selecting the columns you want first does the same job and leaves the warning available for the cases you did not expect.
+
+## What `write_ris()` will write
+
+A column reaches the file if `tag_map` names it, or the dialect maps it (`author` → `AU`), or it is already one of `ris_valid_tags()`. Anything else is dropped, with one warning listing the columns one per line — `warn_dropped = FALSE` silences it without changing what is written.
+
+The check is against a fixed list rather than a shape pattern, so a plausible-looking but invalid name such as `TITL` or `SDG1` is dropped too. `ER` is deliberately not on the list: it terminates a record rather than holding a value, so writing it as data splits every record in two. Use `tag_map` to force through a tag that is not on the whitelist:
+
+```r
+write_ris(df, "out.ris", tag_map = c(my_field = "U4"))
+```
+
+Because the drop happens before any value is read, a list column — which `as.character()` would otherwise deparse into the file — can never reach it.
+
 ## Notes and caveats
 
 **`ED` means two things.** `ris_tag_lookup()` lists `ED` twice, as both `editor` and `edition`, because RIS conventions genuinely use it for both. This does not affect reading — columns come from the file, not the table — so it is only something to be aware of when interpreting an `ED` column yourself.
@@ -179,6 +307,11 @@ Splitting works at the text level, not by parsing. Records are delimited by line
 | `ris_index()` | sequential record names, `ref_01`, `ref_02`, … |
 | `ris_tag_lookup()` | what each RIS tag conventionally means |
 | `split_ris_file()` | split a large RIS file into chunks |
+| `ris_valid_tags()` | the tags `write_ris()` will write |
+| `oa2df()` | OpenAlex works (JSON, list, or file) &rarr; dataframe |
+| `oa2ristags()` | OpenAlex column names &rarr; RIS tags |
+| `oa_ris_tags()` | the OpenAlex column &rarr; RIS tag mapping |
+| `oa_ris_types()` | the OpenAlex type &rarr; RIS `TY` mapping |
 
 ## License
 
