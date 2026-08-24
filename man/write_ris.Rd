@@ -15,7 +15,8 @@ write_ris(
   journal_from_position = FALSE,
   year_suffix = NULL,
   blank_line = TRUE,
-  eol = NULL
+  eol = NULL,
+  warn_dropped = TRUE
 )
 }
 \arguments{
@@ -59,6 +60,13 @@ that Ovid exports use.}
 Pass \code{FALSE} to write one record straight after another.}
 
 \item{eol}{Line ending. Defaults to \code{"\\r\\n"} for RIS and \code{"\\n"} for BibTeX.}
+
+\item{warn_dropped}{If \code{TRUE} (the default), warn about columns that were
+excluded from the file — both those with no RIS tag and those holding a
+list or nested table. Pass \code{FALSE} where the drop is expected and the
+warning is noise, such as writing \code{\link[=oa2df]{oa2df()}} output, which carries twenty
+or so columns with no RIS equivalent by design. Columns are dropped either
+way; this only controls whether you are told.}
 }
 \value{
 The filename, invisibly.
@@ -76,11 +84,16 @@ name is one of \code{\link[=ris_valid_tags]{ris_valid_tags()}}, which is what le
 \code{\link[=read_ris]{read_ris()}} round-trip unchanged. So a column reaches the file if
 \code{tag_map} names it, or the dialect maps it, or it is already a valid tag.
 
-Anything else is dropped, with one warning naming the columns:
+Anything else is dropped, with one warning listing the columns:
 
 \if{html}{\out{<div class="sourceCode">}}\preformatted{The following columns are not named with valid RIS tags; they have been
-excluded from your RIS file: display_name, referenced_works, is_oa
+excluded from your RIS file:
+  display_name
+  referenced_works
+  is_oa
 }\if{html}{\out{</div>}}
+
+Set \code{warn_dropped = FALSE} to drop them silently.
 
 This is what makes it safe to write a data frame that did not come from
 \code{\link[=read_ris]{read_ris()}} — \code{\link[=oa2df]{oa2df()}} output, a spreadsheet, an API response — since the

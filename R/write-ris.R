@@ -115,6 +115,24 @@ resolve_ris_tags <- function(field, lookup) {
 }
 
 
+# One warning naming every column that will not reach the file, one per line.
+#
+# A comma-separated list ran together once it was more than a few names long,
+# and that is the normal case rather than the exception: oa2df() output has
+# forty columns, twenty of which have no RIS tag, so the list is what the
+# reader actually has to scan.
+warn_dropped_columns <- function(columns, reason, advice = NULL) {
+  warning(
+    "The following columns ",
+    reason,
+    "; they have been excluded from your RIS file:\n",
+    paste0("  ", columns, collapse = "\n"),
+    if (!is.null(advice)) paste0("\n", advice),
+    call. = FALSE
+  )
+}
+
+
 # "362-91" -> c(startpage = "362", endpage = "91")
 pages_to_tags <- function(value) {
   if (length(value) >= 2) {
@@ -305,6 +323,12 @@ entry_to_ris <- function(
 #'   `ER`, which makes the records easy to tell apart when reading the file.
 #'   Pass `FALSE` to write one record straight after another.
 #' @param eol Line ending. Defaults to `"\r\n"` for RIS and `"\n"` for BibTeX.
+#' @param warn_dropped If `TRUE` (the default), warn about columns that were
+#'   excluded from the file — both those with no RIS tag and those holding a
+#'   list or nested table. Pass `FALSE` where the drop is expected and the
+#'   warning is noise, such as writing [oa2df()] output, which carries twenty
+#'   or so columns with no RIS equivalent by design. Columns are dropped either
+#'   way; this only controls whether you are told.
 #'
 #' @return The filename, invisibly.
 #'
@@ -318,12 +342,17 @@ entry_to_ris <- function(
 #' [read_ris()] round-trip unchanged. So a column reaches the file if
 #' `tag_map` names it, or the dialect maps it, or it is already a valid tag.
 #'
-#' Anything else is dropped, with one warning naming the columns:
+#' Anything else is dropped, with one warning listing the columns:
 #'
 #' ```
 #' The following columns are not named with valid RIS tags; they have been
-#' excluded from your RIS file: display_name, referenced_works, is_oa
+#' excluded from your RIS file:
+#'   display_name
+#'   referenced_works
+#'   is_oa
 #' ```
+#'
+#' Set `warn_dropped = FALSE` to drop them silently.
 #'
 #' This is what makes it safe to write a data frame that did not come from
 #' [read_ris()] — [oa2df()] output, a spreadsheet, an API response — since the
@@ -374,7 +403,8 @@ write_ris <- function(
   journal_from_position = FALSE,
   year_suffix = NULL,
   blank_line = TRUE,
-  eol = NULL
+  eol = NULL,
+  warn_dropped = TRUE
 ) {
   if (missing(filename)) {
     stop("argument 'filename' is missing, with no default")
@@ -439,12 +469,9 @@ write_ris <- function(
     fields <- setdiff(fields, c("label", "filename", "pages", "page"))
     unmapped <- fields[is.na(resolve_ris_tags(fields, lookup))]
     if (length(unmapped) > 0) {
-      warning(
-        "The following columns are not named with valid RIS tags; they have ",
-        "been excluded from your RIS file: ",
-        paste(unmapped, collapse = ", "),
-        call. = FALSE
-      )
+      if (warn_dropped) {
+        warn_dropped_columns(unmapped, "are not named with valid RIS tags")
+      }
       if (resplit) {
         x <- x[, !(colnames(x) %in% unmapped), drop = FALSE]
       }
@@ -458,13 +485,13 @@ write_ris <- function(
     if (resplit && ncol(x) > 0) {
       nested <- !vapply(x, is.atomic, logical(1))
       if (any(nested)) {
-        warning(
-          "The following columns hold lists or nested tables rather than ",
-          "single values; they have been excluded from your RIS file: ",
-          paste(colnames(x)[nested], collapse = ", "),
-          ". Collapse them to delimited strings first (see oa2df()).",
-          call. = FALSE
-        )
+        if (warn_dropped) {
+          warn_dropped_columns(
+            colnames(x)[nested],
+            "hold lists or nested tables rather than single values",
+            "Collapse them to delimited strings first (see oa2df())."
+          )
+        }
         x <- x[, !nested, drop = FALSE]
       }
     }

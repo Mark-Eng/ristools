@@ -48,7 +48,7 @@ test_that("a tag-shaped but invalid name is dropped, not written", {
   f <- tempfile(fileext = ".ris")
   on.exit(unlink(f))
 
-  expect_warning(write_ris(df, f), "TITL, SDG1")
+  expect_warning(write_ris(df, f), "TITL\n  SDG1")
   lines <- readLines(f, warn = FALSE)
   expect_false(any(grepl("^TITL", lines)))
   expect_false(any(grepl("^SDG1", lines)))
@@ -68,10 +68,48 @@ test_that("the warning names every dropped column, in one message", {
     write_ris(df, f),
     paste0(
       "The following columns are not named with valid RIS tags; they have ",
-      "been excluded from your RIS file: alpha, beta"
+      "been excluded from your RIS file:\n  alpha\n  beta"
     ),
     fixed = TRUE
   )
+})
+
+test_that("warn_dropped = FALSE drops the columns without saying so", {
+  df <- data.frame(
+    TY = "JOUR",
+    TI = "A study",
+    alpha = 1,
+    stringsAsFactors = FALSE
+  )
+  df$nested <- list(list(a = 1))
+  f <- tempfile(fileext = ".ris")
+  on.exit(unlink(f))
+
+  expect_no_warning(write_ris(df, f, warn_dropped = FALSE))
+
+  # silence is not permission: the columns are still dropped, so the file is
+  # the same one the warning would have described
+  lines <- readLines(f, warn = FALSE)
+  expect_false(any(grepl("alpha|nested|list\\(", lines)))
+  expect_equal(read_ris(f)$TI, "A study")
+
+  f2 <- tempfile(fileext = ".ris")
+  on.exit(unlink(f2), add = TRUE)
+  suppressWarnings(write_ris(df, f2))
+  expect_identical(readLines(f, warn = FALSE), readLines(f2, warn = FALSE))
+})
+
+test_that("dropped columns are listed one per line", {
+  df <- data.frame(TY = "JOUR", alpha = 1, beta = 2, gamma = 3)
+  f <- tempfile(fileext = ".ris")
+  on.exit(unlink(f))
+
+  msg <- tryCatch(write_ris(df, f), warning = conditionMessage)
+
+  # a comma-separated list ran together once it was more than a few names
+  # long, which is the normal case for oa2df() output
+  expect_match(msg, "RIS file:\n  alpha\n  beta\n  gamma", fixed = TRUE)
+  expect_false(grepl("alpha, beta", msg, fixed = TRUE))
 })
 
 test_that("semantically named columns still write", {

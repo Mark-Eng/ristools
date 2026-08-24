@@ -48,8 +48,16 @@ This release adds a path from OpenAlex into RIS, and tightens what
 
   ```
   The following columns are not named with valid RIS tags; they have been
-  excluded from your RIS file: display_name, referenced_works, is_oa
+  excluded from your RIS file:
+    display_name
+    referenced_works
+    is_oa
   ```
+
+  `write_ris(warn_dropped = FALSE)` silences that warning and the nested-column
+  one below it, for the case where the drop is expected — writing `oa2df()`
+  output, which carries twenty or so columns with no RIS equivalent by design.
+  The columns are dropped either way.
 
   A column reaches the file if `tag_map` names it, or the dialect maps it, or
   it is already one of `ris_valid_tags()`. The whitelist is applied **after**

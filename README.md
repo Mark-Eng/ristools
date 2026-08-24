@@ -259,15 +259,25 @@ What it cannot detect is a name OpenAlex already stores family-name first, which
 ```r
 write_ris(df, "openalex.ris")
 #> Warning: The following columns are not named with valid RIS tags; they have
-#> been excluded from your RIS file: display_name, relevance_score, fwci,
-#> is_oa, is_oa_anywhere, oa_status, ...
+#> been excluded from your RIS file:
+#>   display_name
+#>   relevance_score
+#>   fwci
+#>   is_oa
+#>   ...
 ```
 
-That warning is the design, not a problem — select the columns you want first if you would rather not see it.
+That warning is the design, not a problem. Since it is expected here, `warn_dropped = FALSE` turns it off:
+
+```r
+write_ris(df, "openalex.ris", warn_dropped = FALSE)
+```
+
+The columns are dropped either way — the argument only controls whether you are told. Selecting the columns you want first does the same job and leaves the warning available for the cases you did not expect.
 
 ## What `write_ris()` will write
 
-A column reaches the file if `tag_map` names it, or the dialect maps it (`author` → `AU`), or it is already one of `ris_valid_tags()`. Anything else is dropped, with one warning naming the columns.
+A column reaches the file if `tag_map` names it, or the dialect maps it (`author` → `AU`), or it is already one of `ris_valid_tags()`. Anything else is dropped, with one warning listing the columns one per line — `warn_dropped = FALSE` silences it without changing what is written.
 
 The check is against a fixed list rather than a shape pattern, so a plausible-looking but invalid name such as `TITL` or `SDG1` is dropped too. `ER` is deliberately not on the list: it terminates a record rather than holding a value, so writing it as data splits every record in two. Use `tag_map` to force through a tag that is not on the whitelist:
 
