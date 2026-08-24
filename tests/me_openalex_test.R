@@ -12,5 +12,5 @@ measure_pov_ris <- measure_pov_df %>%
 
 write_ris(
   measure_pov_ris,
-  "C:/Users/ME/Code/R/info_retrieval/input_files/measure_poverty_papers.ris"
+  "tests/measure_poverty_papers.ris"
 )
