@@ -14,7 +14,7 @@ write_ris(
   order_tags = TRUE,
   journal_from_position = FALSE,
   year_suffix = NULL,
-  blank_line = FALSE,
+  blank_line = TRUE,
   eol = NULL
 )
 }
@@ -54,7 +54,9 @@ discards the source tag.}
 \code{\link[=read_ris]{read_ris()}} writes back unchanged. Pass \code{"//"} for the \code{"2020//"} form
 that Ovid exports use.}
 
-\item{blank_line}{If \code{TRUE}, add an empty line after each \code{ER}.}
+\item{blank_line}{If \code{TRUE} (the default), add an empty line after each
+\code{ER}, which makes the records easy to tell apart when reading the file.
+Pass \code{FALSE} to write one record straight after another.}
 
 \item{eol}{Line ending. Defaults to \code{"\\r\\n"} for RIS and \code{"\\n"} for BibTeX.}
 }
@@ -96,6 +98,8 @@ correct name says nothing about the contents. The \code{label} and \code{filenam
 columns that \code{\link[=read_ris]{read_ris()}} adds are never written.
 
 RIS output uses CRLF line endings and no quoting, as RIS consumers expect.
+Records are separated by a blank line; see \code{blank_line}. The blank line is
+cosmetic — \code{\link[=read_ris]{read_ris()}} ignores it, so it does not affect a round trip.
 }
 \examples{
 df <- data.frame(

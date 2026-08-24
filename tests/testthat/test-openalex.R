@@ -397,8 +397,9 @@ test_that("a record with almost every field absent still writes a valid entry", 
   suppressWarnings(write_ris(out[3, ], f))
   lines <- readLines(f, warn = FALSE)
 
-  # TY first and ER last is what makes a record findable
+  # TY first and ER last is what makes a record findable. Records are
+  # separated by a blank line, so the file ends with one.
   expect_equal(lines[1], "TY  - JOUR")
-  expect_equal(lines[length(lines)], "ER  -")
+  expect_equal(utils::tail(lines[nzchar(lines)], 1), "ER  -")
   expect_equal(read_ris(f)$TI, "A record with almost every field absent")
 })

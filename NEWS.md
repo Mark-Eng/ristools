@@ -66,6 +66,12 @@ This release adds a path from OpenAlex into RIS, and tightens what
 * **The warning text changed.** Code matching on `"no RIS tag for the
   following field(s)"` needs updating.
 
+* **`write_ris()` separates records with a blank line.** `blank_line` now
+  defaults to `TRUE`, which makes a file far easier to read. The line is
+  cosmetic — `read_ris()` ignores it and `split_ris_file()` copies it
+  verbatim, so nothing about a round trip changes. Pass `blank_line = FALSE`
+  for the old output.
+
 * **`jsonlite` is now a dependency.** The package no longer depends only on
   base R.
 

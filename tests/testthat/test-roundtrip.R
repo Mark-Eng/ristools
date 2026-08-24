@@ -139,3 +139,37 @@ test_that("multiple files are combined with a filename column", {
   # the per-file frames rbind() was given
   expect_equal(rownames(df), as.character(seq_len(nrow(df))))
 })
+
+test_that("records are separated by a blank line", {
+  f1 <- write_temp_ris(c(awkward_ris(), sparse_ris()))
+  on.exit(unlink(f1), add = TRUE)
+
+  f2 <- tempfile(fileext = ".ris")
+  on.exit(unlink(f2), add = TRUE)
+  write_ris(read_ris(f1), f2)
+  lines <- readLines(f2, warn = FALSE)
+
+  # every ER is followed by an empty line, including the last
+  er <- which(lines == "ER  -")
+  expect_length(er, 2)
+  expect_true(all(lines[er + 1] == ""))
+  # and a blank line appears nowhere else
+  expect_equal(which(!nzchar(lines)), er + 1)
+})
+
+test_that("the blank line between records is ignored on the way back in", {
+  f1 <- write_temp_ris(c(awkward_ris(), sparse_ris()))
+  on.exit(unlink(f1), add = TRUE)
+  df1 <- read_ris(f1)
+
+  spaced <- tempfile(fileext = ".ris")
+  tight <- tempfile(fileext = ".ris")
+  on.exit(unlink(c(spaced, tight)), add = TRUE)
+  write_ris(df1, spaced)
+  write_ris(df1, tight, blank_line = FALSE)
+
+  # the separator is cosmetic: both files read back to the same data frame.
+  # Not compared against df1, which write_ris(order_tags = TRUE) reorders --
+  # the first test in this file covers values surviving the round trip.
+  expect_equal(read_ris(spaced), read_ris(tight))
+})

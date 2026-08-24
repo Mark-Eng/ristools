@@ -301,7 +301,9 @@ entry_to_ris <- function(
 #'   `""`, which writes the year exactly as given, so a file read by
 #'   [read_ris()] writes back unchanged. Pass `"//"` for the `"2020//"` form
 #'   that Ovid exports use.
-#' @param blank_line If `TRUE`, add an empty line after each `ER`.
+#' @param blank_line If `TRUE` (the default), add an empty line after each
+#'   `ER`, which makes the records easy to tell apart when reading the file.
+#'   Pass `FALSE` to write one record straight after another.
 #' @param eol Line ending. Defaults to `"\r\n"` for RIS and `"\n"` for BibTeX.
 #'
 #' @return The filename, invisibly.
@@ -339,6 +341,8 @@ entry_to_ris <- function(
 #' columns that [read_ris()] adds are never written.
 #'
 #' RIS output uses CRLF line endings and no quoting, as RIS consumers expect.
+#' Records are separated by a blank line; see `blank_line`. The blank line is
+#' cosmetic — [read_ris()] ignores it, so it does not affect a round trip.
 #'
 #' @examples
 #' df <- data.frame(
@@ -369,7 +373,7 @@ write_ris <- function(
   order_tags = TRUE,
   journal_from_position = FALSE,
   year_suffix = NULL,
-  blank_line = FALSE,
+  blank_line = TRUE,
   eol = NULL
 ) {
   if (missing(filename)) {
