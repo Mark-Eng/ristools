@@ -148,7 +148,7 @@ ris_tag_whitelist <- function() {
 #'
 #' @details
 #' This matters when the data frame did not come from [read_ris()]. Records
-#' converted from another source — [oa2df()] output, a spreadsheet, an API
+#' converted from another source — [oa2risdf()] output, a spreadsheet, an API
 #' response — carry column names that are not tags, and writing those verbatim
 #' would produce a file no RIS reader can parse. Checking against a fixed list
 #' rather than a shape pattern also stops a plausible-looking but invalid name

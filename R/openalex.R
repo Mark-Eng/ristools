@@ -14,7 +14,7 @@
 #  reader rather than a wrapper. Every column here is an atomic vector.
 #
 #  Names follow openalexR's, so a script written against it mostly transfers.
-#  Where the two differ it is noted in the roxygen for oa2df().
+#  Where the two differ it is noted in the roxygen for oa2risdf().
 # ============================================================================
 
 
@@ -192,7 +192,7 @@ oa_is_work <- function(x) {
 }
 
 
-# anything oa2df() accepts -> a plain list of work objects
+# anything oa2risdf() accepts -> a plain list of work objects
 oa_records <- function(data) {
   if (is.character(data)) {
     if (length(data) != 1 || is.na(data)) {
@@ -260,7 +260,7 @@ oa_check_works <- function(recs) {
   )
   if (!any(work_fields %in% names(first))) {
     stop(
-      "oa2df() converts OpenAlex *works*. These records look like a ",
+      "oa2risdf() converts OpenAlex *works*. These records look like a ",
       "different entity (authors, institutions, sources, ...); use ",
       "openalexR::oa2df() for those.",
       call. = FALSE
@@ -270,7 +270,7 @@ oa_check_works <- function(recs) {
 }
 
 
-# the columns oa2df() produces, in order
+# the columns oa2risdf() produces, in order
 oa_columns <- function(abstract = TRUE) {
   cols <- c(
     "id", "title", "display_name", "authorships", "abstract", "doi",
@@ -346,9 +346,6 @@ oa_columns <- function(abstract = TRUE) {
 #'   all: `ids`, `counts_by_year`, `apc`, `funders` and `awards`.
 #' * Only works are handled. Use `openalexR::oa2df()` for other entities.
 #'
-#' Note that `ristools::oa2df()` masks `openalexR::oa2df()` if both packages
-#' are attached; call it as `ristools::oa2df()` where both are in play.
-#'
 #' @examples
 #' works <- list(list(
 #'   id = "https://openalex.org/W2755950973",
@@ -362,19 +359,19 @@ oa_columns <- function(abstract = TRUE) {
 #'   keywords = list(list(display_name = "Bibliometrics"))
 #' ))
 #'
-#' df <- oa2df(works)
+#' df <- oa2risdf(works)
 #' df$authorships
 #' df$keywords
 #'
 #' # straight to RIS tags
-#' oa2df(works, ris_tags = TRUE)[, c("TY", "ID", "AU")]
+#' oa2risdf(works, ris_tags = TRUE)[, c("TY", "ID", "AU")]
 #'
 #' @seealso [oa2ristags()] to rename the columns to RIS tags, [write_ris()] to
 #'   write the result out, [ris_valid_tags()] for what survives that write.
 #'
 #' @importFrom jsonlite fromJSON
 #' @export
-oa2df <- function(
+oa2risdf <- function(
   data,
   ris_tags = FALSE,
   abstract = TRUE,
@@ -506,10 +503,10 @@ oa2df <- function(
 #' The column-name mapping [oa2ristags()] applies, as a table.
 #'
 #' @return A data frame with one row per mapped column and two columns: `oa`
-#'   (the [oa2df()] column name) and `ris` (the RIS tag it becomes).
+#'   (the [oa2risdf()] column name) and `ris` (the RIS tag it becomes).
 #'
 #' @details
-#' Rows are in the order [oa2ristags()] puts the columns in. Any [oa2df()]
+#' Rows are in the order [oa2ristags()] puts the columns in. Any [oa2risdf()]
 #' column not listed here keeps its OpenAlex name, and is therefore dropped by
 #' [write_ris()] with a warning.
 #'
@@ -778,10 +775,10 @@ oa_strip_prefix <- function(v, prefix) {
 #' Rename OpenAlex columns to RIS tags
 #'
 #' Converts the column names - and, where a RIS tag means something narrower
-#' than the OpenAlex field, the values - of an [oa2df()] data frame into RIS
+#' than the OpenAlex field, the values - of an [oa2risdf()] data frame into RIS
 #' form, ready for [write_ris()].
 #'
-#' @param x A data frame with [oa2df()]-style column names.
+#' @param x A data frame with [oa2risdf()]-style column names.
 #' @param invert_authors If `TRUE` (the default), author names are rewritten
 #'   from `"Massimo Aria"` to `"Aria, Massimo"`, the form RIS consumers expect.
 #'   See details for what this cannot get right.
@@ -858,7 +855,7 @@ oa_strip_prefix <- function(v, prefix) {
 #' # fwci has no RIS tag, so it survives here and is dropped by write_ris()
 #' "fwci" %in% colnames(out)
 #'
-#' @seealso [oa2df()], which calls this when `ris_tags = TRUE`;
+#' @seealso [oa2risdf()], which calls this when `ris_tags = TRUE`;
 #'   [oa_ris_tags()] and [oa_ris_types()] for the two mapping tables.
 #'
 #' @export

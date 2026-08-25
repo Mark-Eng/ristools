@@ -20,14 +20,14 @@ oa_fixture <- function() {
 # conversion of this fixture warns. That warning has its own test; everywhere
 # else it is noise.
 oa_ris_fixture <- function(...) {
-  suppressWarnings(oa2df(oa_fixture(), ris_tags = TRUE, ...))
+  suppressWarnings(oa2risdf(oa_fixture(), ris_tags = TRUE, ...))
 }
 
 
-# ---------------------------------------------------------------- oa2df() --
+# -------------------------------------------------------------- oa2risdf() --
 
 test_that("the five nested fields become delimited strings", {
-  df <- oa2df(oa_fixture())
+  df <- oa2risdf(oa_fixture())
 
   expect_s3_class(df, "data.frame")
   expect_equal(nrow(df), 4)
@@ -45,7 +45,7 @@ test_that("the five nested fields become delimited strings", {
 })
 
 test_that("no column is a list column", {
-  df <- oa2df(oa_fixture())
+  df <- oa2risdf(oa_fixture())
 
   # the whole point: write_ris() coerces with as.character(), which deparses a
   # list column into "list(id = c(...), display_name = c(...))"
@@ -54,7 +54,7 @@ test_that("no column is a list column", {
 })
 
 test_that("topic_levels keeps only the levels asked for", {
-  df <- oa2df(oa_fixture())
+  df <- oa2risdf(oa_fixture())
 
   # the default drops the field and domain rows
   expect_equal(
@@ -72,11 +72,11 @@ test_that("topic_levels keeps only the levels asked for", {
     gregexpr("Library and Information Sciences", df$topics[1], fixed = TRUE)
   ))[[1]], 1)
 
-  all_levels <- oa2df(oa_fixture(), topic_levels = NULL)
+  all_levels <- oa2risdf(oa_fixture(), topic_levels = NULL)
   expect_true(grepl("Computer Science", all_levels$topics[1], fixed = TRUE))
   expect_true(grepl("Physical Sciences", all_levels$topics[1], fixed = TRUE))
 
-  just_topics <- oa2df(oa_fixture(), topic_levels = "topic")
+  just_topics <- oa2risdf(oa_fixture(), topic_levels = "topic")
   expect_equal(
     just_topics$topics[1],
     "Scientometrics and Bibliometrics Research | Data Analysis with R"
@@ -96,11 +96,11 @@ test_that("author order is kept and duplicate names are not dropped", {
   ))
 
   # not sorted, and not de-duplicated: dropping the third would lose an author
-  expect_equal(oa2df(works)$authorships, "Zoe Adams | Alan Brown | Zoe Adams")
+  expect_equal(oa2risdf(works)$authorships, "Zoe Adams | Alan Brown | Zoe Adams")
 })
 
 test_that("empty arrays and absent fields both give NA, never the string 'NA'", {
-  df <- oa2df(oa_fixture())
+  df <- oa2risdf(oa_fixture())
 
   # record 2 has every list field as [], record 3 omits them entirely
   for (cl in c(
@@ -114,7 +114,7 @@ test_that("empty arrays and absent fields both give NA, never the string 'NA'", 
 })
 
 test_that("the abstract is rebuilt from the inverted index", {
-  df <- oa2df(oa_fixture())
+  df <- oa2risdf(oa_fixture())
 
   expect_equal(df$abstract[1], "This paper describes bibliometrix.")
   # absent stays absent rather than becoming ""
@@ -122,20 +122,20 @@ test_that("the abstract is rebuilt from the inverted index", {
 })
 
 test_that("abstract = FALSE drops the column rather than emptying it", {
-  df <- oa2df(oa_fixture(), abstract = FALSE)
+  df <- oa2risdf(oa_fixture(), abstract = FALSE)
 
   expect_false("abstract" %in% colnames(df))
 })
 
 test_that("the legacy 'keyword' spelling is still read", {
-  df <- oa2df(oa_fixture())
+  df <- oa2risdf(oa_fixture())
 
   # record 4 uses {"keyword": ...} rather than {"display_name": ...}
   expect_equal(df$keywords[4], "legacy keyword form")
 })
 
 test_that("scalar fields are read from the right sub-object", {
-  df <- oa2df(oa_fixture())
+  df <- oa2risdf(oa_fixture())
 
   expect_equal(df$source_display_name[1], "Journal of Informetrics")
   expect_equal(df$issn_l[1], "1751-1577")
@@ -148,7 +148,7 @@ test_that("scalar fields are read from the right sub-object", {
   expect_equal(df$fwci[1], 12.5)
   expect_false(df$is_oa[1])
   expect_true(df$is_oa_anywhere[2])
-  # a character date, not a Date -- see the roxygen for oa2df()
+  # a character date, not a Date -- see the roxygen for oa2risdf()
   expect_type(df$publication_date, "character")
   expect_equal(df$publication_date[1], "2017-11-01")
 })
@@ -161,24 +161,24 @@ test_that("every accepted input form gives the same data frame", {
   envelope <- jsonlite::fromJSON(path, simplifyVector = FALSE)
   works <- envelope$results
 
-  from_path <- oa2df(path)
-  expect_equal(oa2df(envelope), from_path)
-  expect_equal(oa2df(works), from_path)
-  expect_equal(oa2df(readChar(path, file.info(path)$size)), from_path)
+  from_path <- oa2risdf(path)
+  expect_equal(oa2risdf(envelope), from_path)
+  expect_equal(oa2risdf(works), from_path)
+  expect_equal(oa2risdf(readChar(path, file.info(path)$size)), from_path)
 
   # a paged fetch, saved page by page
   paged <- list(
     list(meta = list(page = 1), results = works[1:2]),
     list(meta = list(page = 2), results = works[3:4])
   )
-  expect_equal(oa2df(paged), from_path)
+  expect_equal(oa2risdf(paged), from_path)
 
   # a single work, fetched by id
-  expect_equal(oa2df(works[[1]]), from_path[1, ])
+  expect_equal(oa2risdf(works[[1]]), from_path[1, ])
 })
 
 test_that("an empty result gives a zero-row frame, not an error", {
-  empty <- oa2df(list(meta = list(count = 0), results = list()))
+  empty <- oa2risdf(list(meta = list(count = 0), results = list()))
 
   expect_equal(nrow(empty), 0)
   expect_true("authorships" %in% colnames(empty))
@@ -192,12 +192,12 @@ test_that("a non-works entity is refused rather than converted to NAs", {
     cited_by_count = 5000L
   ))
 
-  expect_error(oa2df(authors), "OpenAlex \\*works\\*")
+  expect_error(oa2risdf(authors), "OpenAlex \\*works\\*")
 })
 
 test_that("a string that is neither a file nor JSON is refused", {
-  expect_error(oa2df("not json and not a file"), "neither an existing file")
-  expect_error(oa2df(c("a", "b")), "not a vector")
+  expect_error(oa2risdf("not json and not a file"), "neither an existing file")
+  expect_error(oa2risdf(c("a", "b")), "not a vector")
 })
 
 
@@ -213,7 +213,7 @@ test_that("columns are renamed to the tags in oa_ris_tags()", {
 
 test_that("the ris_tags argument and the standalone function agree", {
   # one implementation, two entry points: this is what pins that
-  standalone <- function(...) suppressWarnings(oa2ristags(oa2df(oa_fixture()), ...))
+  standalone <- function(...) suppressWarnings(oa2ristags(oa2risdf(oa_fixture()), ...))
 
   expect_identical(oa_ris_fixture(), standalone())
   expect_identical(
@@ -284,7 +284,7 @@ test_that("OpenAlex work types become RIS reference types", {
 test_that("an unknown or missing type becomes GEN, with a warning", {
   # deliberately not oa_ris_fixture(): the warning is the subject here
   expect_warning(
-    out <- oa2df(oa_fixture(), ris_tags = TRUE),
+    out <- oa2risdf(oa_fixture(), ris_tags = TRUE),
     "video-essay"
   )
   expect_equal(out$TY[4], "GEN")
@@ -352,7 +352,7 @@ test_that("name inversion follows its documented rules", {
 
 # ------------------------------------------------------------- end to end --
 
-test_that("OpenAlex JSON survives oa2df -> write_ris -> read_ris", {
+test_that("OpenAlex JSON survives oa2risdf -> write_ris -> read_ris", {
   out <- oa_ris_fixture()
 
   f <- tempfile(fileext = ".ris")
@@ -364,7 +364,7 @@ test_that("OpenAlex JSON survives oa2df -> write_ris -> read_ris", {
   expect_equal(nrow(back), 4)
   expect_equal(back$TY[1], "JOUR")
   expect_equal(back$ID[1], "W2755950973")
-  # the delimiter oa2df() joins with is the one write_ris() splits on, so a
+  # the delimiter oa2risdf() joins with is the one write_ris() splits on, so a
   # three-author paper writes three AU lines and reads back as three values
   expect_equal(
     back$AU[1],

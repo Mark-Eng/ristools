@@ -20,7 +20,7 @@ over.
 
 Flattening afterwards is possible but strictly worse: you pay `rbind.data.frame`
 per record to build a tibble you immediately tear apart, and you inherit its
-empty-value shapes (below) rather than choosing your own. So `oa2df()` here
+empty-value shapes (below) rather than choosing your own. So `oa2risdf()` here
 reads the parsed JSON directly. It is a sibling of `openalexR::oa2df()`, not a
 layer on it — the same relationship `parse_ris_raw()` has to the semantic
 parser described in `reintroducing-semantic-fields.md`.
@@ -51,7 +51,7 @@ Reading the JSON directly sidesteps all four, but any code that *does* consume
 `openalexR` output has to handle every one. `oa_names_from()` and friends here
 are written against `NULL` and zero length only, which is all raw JSON produces.
 
-## Why `topic_levels` is on `oa2df()` and not `oa2ristags()`
+## Why `topic_levels` is on `oa2risdf()` and not `oa2ristags()`
 
 Each entry in a work's `topics` array carries a `subfield`, `field` and `domain`
 sub-object beside its own id and name. `openalexR` unrolls that into a long
@@ -63,18 +63,18 @@ The filter has to be applied while that structure exists. Once the column is
 there is nothing left saying which level each name came from, so
 `oa2ristags()` — which only ever sees the collapsed frame — cannot do it.
 
-**This is the one place `oa2df()` output diverges from OpenAlex semantics by
+**This is the one place `oa2risdf()` output diverges from OpenAlex semantics by
 default**: its `topics` column is already topic+subfield only. That is why the
 argument exists and is documented rather than being a silent choice. Pass
 `topic_levels = NULL` for all four.
 
 ## `oa2ristags()` is the implementation; `ris_tags =` is an entry point
 
-`oa2df(ris_tags = TRUE)` calls `oa2ristags()` as its last line and does nothing
+`oa2risdf(ris_tags = TRUE)` calls `oa2ristags()` as its last line and does nothing
 else. There is one code path, so the two cannot disagree. The test that pins it:
 
 ```r
-expect_identical(oa2df(x, ris_tags = TRUE), oa2ristags(oa2df(x)))
+expect_identical(oa2risdf(x, ris_tags = TRUE), oa2ristags(oa2risdf(x)))
 ```
 
 Keep that test if the argument list changes — it is the only thing stopping the
@@ -83,7 +83,7 @@ argument growing behaviour the standalone function lacks.
 `oa2ristags()` is deliberately **not** a pure rename. Five mappings rewrite
 values (`TY` recode, two URL strips, two prefixes) and author inversion rewrites
 a sixth. All six are RIS conventions, meaningless outside a RIS file, so they
-belong with the renaming rather than in `oa2df()`. The cost is that the function
+belong with the renaming rather than in `oa2risdf()`. The cost is that the function
 is not idempotent by construction, which is why it carries an explicit guard:
 if no OpenAlex column names are present but RIS tags are, it returns unchanged
 with a message.

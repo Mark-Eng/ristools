@@ -50,7 +50,7 @@ tags[tags$ris == "M3", ]
 split_ris_file("huge_export.ris", "chunks/", set_size = 10000)
 
 # OpenAlex works -> dataframe with RIS tags for column names -> .ris
-oa <- oa2df("openalex_search.json", ris_tags = TRUE)
+oa <- oa2risdf("openalex_search.json", ris_tags = TRUE)
 write_ris(oa, "openalex.ris")
 ```
 
@@ -165,12 +165,12 @@ Splitting works at the text level, not by parsing. Records are delimited by line
 
 ## OpenAlex
 
-`oa2df()` reads OpenAlex works into a dataframe with no nested columns, and `oa2ristags()` renames those columns to RIS tags, so a search result can go straight to a `.ris` file:
+`oa2risdf()` reads OpenAlex works into a dataframe with no nested columns, and `oa2ristags()` renames those columns to RIS tags, so a search result can go straight to a `.ris` file:
 
 ```r
 # a saved API response, a list from openalexR::oa_request(), a JSON string,
 # or a single work — all accepted
-df <- oa2df("openalex_search.json", ris_tags = TRUE)
+df <- oa2risdf("openalex_search.json", ris_tags = TRUE)
 write_ris(df, "openalex.ris")
 ```
 
@@ -229,8 +229,6 @@ Column names are the same, so most code transfers. What differs:
 | `ids`, `counts_by_year`, `apc`, `funders`, `awards` | not carried over — no RIS meaning and no atomic form |
 | entities | works only; use `openalexR::oa2df()` for authors, sources, … |
 
-`ristools::oa2df()` masks `openalexR::oa2df()` if both packages are attached — call it as `ristools::oa2df()` where both are in play.
-
 ### Values that change on the way to RIS
 
 `oa2ristags()` rewrites values where a RIS tag means something narrower than the OpenAlex field:
@@ -254,7 +252,7 @@ What it cannot detect is a name OpenAlex already stores family-name first, which
 
 ### Columns with no RIS equivalent
 
-`oa2df()` returns everything it reads, so most of its 40 columns have no RIS tag. They are kept rather than dropped, because `write_ris()` is the single place that decides what reaches a file:
+`oa2risdf()` returns everything it reads, so most of its 40 columns have no RIS tag. They are kept rather than dropped, because `write_ris()` is the single place that decides what reaches a file:
 
 ```r
 write_ris(df, "openalex.ris")
@@ -308,7 +306,7 @@ Because the drop happens before any value is read, a list column — which `as.c
 | `ris_tag_lookup()` | what each RIS tag conventionally means |
 | `split_ris_file()` | split a large RIS file into chunks |
 | `ris_valid_tags()` | the tags `write_ris()` will write |
-| `oa2df()` | OpenAlex works (JSON, list, or file) &rarr; dataframe |
+| `oa2risdf()` | OpenAlex works (JSON, list, or file) &rarr; dataframe |
 | `oa2ristags()` | OpenAlex column names &rarr; RIS tags |
 | `oa_ris_tags()` | the OpenAlex column &rarr; RIS tag mapping |
 | `oa_ris_types()` | the OpenAlex type &rarr; RIS `TY` mapping |

@@ -107,7 +107,7 @@ test_that("dropped columns are listed one per line", {
   msg <- tryCatch(write_ris(df, f), warning = conditionMessage)
 
   # a comma-separated list ran together once it was more than a few names
-  # long, which is the normal case for oa2df() output
+  # long, which is the normal case for oa2risdf() output
   expect_match(msg, "RIS file:\n  alpha\n  beta\n  gamma", fixed = TRUE)
   expect_false(grepl("alpha, beta", msg, fixed = TRUE))
 })
