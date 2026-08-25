@@ -7,7 +7,7 @@
 oa2ristags(x, invert_authors = TRUE, delimiter = ris_sep())
 }
 \arguments{
-\item{x}{A data frame with \code{\link[=oa2df]{oa2df()}}-style column names.}
+\item{x}{A data frame with \code{\link[=oa2risdf]{oa2risdf()}}-style column names.}
 
 \item{invert_authors}{If \code{TRUE} (the default), author names are rewritten
 from \code{"Massimo Aria"} to \code{"Aria, Massimo"}, the form RIS consumers expect.
@@ -24,7 +24,7 @@ and follow.
 }
 \description{
 Converts the column names - and, where a RIS tag means something narrower
-than the OpenAlex field, the values - of an \code{\link[=oa2df]{oa2df()}} data frame into RIS
+than the OpenAlex field, the values - of an \code{\link[=oa2risdf]{oa2risdf()}} data frame into RIS
 form, ready for \code{\link[=write_ris]{write_ris()}}.
 }
 \details{
@@ -97,6 +97,6 @@ out$N1
 
 }
 \seealso{
-\code{\link[=oa2df]{oa2df()}}, which calls this when \code{ris_tags = TRUE};
+\code{\link[=oa2risdf]{oa2risdf()}}, which calls this when \code{ris_tags = TRUE};
 \code{\link[=oa_ris_tags]{oa_ris_tags()}} and \code{\link[=oa_ris_types]{oa_ris_types()}} for the two mapping tables.
 }

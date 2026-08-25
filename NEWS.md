@@ -5,7 +5,7 @@ This release adds a path from OpenAlex into RIS, and tightens what
 
 ## New features
 
-* **`oa2df()` reads OpenAlex works into a flat data frame.** It accepts a list
+* **`oa2risdf()` reads OpenAlex works into a flat data frame.** It accepts a list
   of work records (`openalexR::oa_request()` output, or
   `jsonlite::fromJSON(simplifyVector = FALSE)`), a whole API response with its
   `meta`/`results` envelope, a list of those from a paged fetch, a single work,
@@ -24,7 +24,7 @@ This release adds a path from OpenAlex into RIS, and tightens what
   `list(id = c(...), display_name = c(...))` and a nested `NA` becomes the
   literal string `"NA"`. The collapse has to happen while the values are still
   a character vector, which is why this is a separate reader rather than a
-  wrapper around that one. `?oa2df` lists the differences in full.
+  wrapper around that one. `?oa2risdf` lists the differences in full.
 
 * **`oa2ristags()` renames those columns to RIS tags**, and rewrites the values
   whose tags mean something narrower: `type` is recoded to a RIS reference
@@ -33,7 +33,7 @@ This release adds a path from OpenAlex into RIS, and tightens what
   `"SDGs: "` for `U3`. Author names are inverted to `"Aria, Massimo"` unless
   `invert_authors = FALSE`.
 
-  `oa2df(ris_tags = TRUE)` calls it, so this is one implementation with two
+  `oa2risdf(ris_tags = TRUE)` calls it, so this is one implementation with two
   entry points rather than two implementations that can drift apart.
 
 * **`oa_ris_tags()` and `oa_ris_types()`** expose the two mapping tables, in
@@ -55,7 +55,7 @@ This release adds a path from OpenAlex into RIS, and tightens what
   ```
 
   `write_ris(warn_dropped = FALSE)` silences that warning and the nested-column
-  one below it, for the case where the drop is expected — writing `oa2df()`
+  one below it, for the case where the drop is expected — writing `oa2risdf()`
   output, which carries twenty or so columns with no RIS equivalent by design.
   The columns are dropped either way.
 

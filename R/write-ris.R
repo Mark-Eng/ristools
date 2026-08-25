@@ -118,7 +118,7 @@ resolve_ris_tags <- function(field, lookup) {
 # One warning naming every column that will not reach the file, one per line.
 #
 # A comma-separated list ran together once it was more than a few names long,
-# and that is the normal case rather than the exception: oa2df() output has
+# and that is the normal case rather than the exception: oa2risdf() output has
 # forty columns, twenty of which have no RIS tag, so the list is what the
 # reader actually has to scan.
 warn_dropped_columns <- function(columns, reason, advice = NULL) {
@@ -326,7 +326,7 @@ entry_to_ris <- function(
 #' @param warn_dropped If `TRUE` (the default), warn about columns that were
 #'   excluded from the file — both those with no RIS tag and those holding a
 #'   list or nested table. Pass `FALSE` where the drop is expected and the
-#'   warning is noise, such as writing [oa2df()] output, which carries twenty
+#'   warning is noise, such as writing [oa2risdf()] output, which carries twenty
 #'   or so columns with no RIS equivalent by design. Columns are dropped either
 #'   way; this only controls whether you are told.
 #'
@@ -355,7 +355,7 @@ entry_to_ris <- function(
 #' Set `warn_dropped = FALSE` to drop them silently.
 #'
 #' This is what makes it safe to write a data frame that did not come from
-#' [read_ris()] — [oa2df()] output, a spreadsheet, an API response — since the
+#' [read_ris()] — [oa2risdf()] output, a spreadsheet, an API response — since the
 #' columns with no RIS meaning simply do not appear. The check is against a
 #' fixed list rather than a shape pattern, so a plausible-looking but invalid
 #' name such as `TITL` or `SDG1` is dropped too, and a column called `ER` can
@@ -389,7 +389,7 @@ entry_to_ris <- function(
 #' unlink(f)
 #'
 #' @seealso [read_ris()] to read files back in, [ris_valid_tags()] for the
-#'   tags that may be written, [oa2df()] to build a data frame from OpenAlex.
+#'   tags that may be written, [oa2risdf()] to build a data frame from OpenAlex.
 #'
 #' @export
 write_ris <- function(
@@ -489,7 +489,7 @@ write_ris <- function(
           warn_dropped_columns(
             colnames(x)[nested],
             "hold lists or nested tables rather than single values",
-            "Collapse them to delimited strings first (see oa2df())."
+            "Collapse them to delimited strings first (see oa2risdf())."
           )
         }
         x <- x[, !nested, drop = FALSE]
