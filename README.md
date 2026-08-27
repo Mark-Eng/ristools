@@ -4,9 +4,14 @@ A set of R tools for reading and writing bibliographic files in RIS format, and 
 
 Reading a RIS file gives you a dataframe whose columns are the file's own tags — `TY`, `AU`, `TI`, `KW` — with nothing renamed, merged or reordered. So you can read a file, inspect and edit it as a table, and write it back out unchanged.
 
-The package also includes a function to split large RIS files into smaller chunks (default = 10,000 references) so they may be more easily imported to reference management/review software.
+The package also includes some functions that are useful for working with OpenAlex data fetched using the [openalexR](https://docs.ropensci.org/openalexR/) package, if your eventual goal is to get the data in RIS format.
+
+Finally, there is a function to split large RIS files into smaller chunks (default = 10,000 references) so they may be more easily imported to reference management/review software.
 
 `ristools` draws on the [revtools](https://github.com/mjwestgate/revtools) codebase. Thanks to Martin Westgate for developing `revtools` and making the code available.
+
+## Note
+This is a work in progress. Feel free to log an issue or feature request. This ReadMe in particular is a bit of a mess in places, but should be broadly accurate. I'll be working on cleaning it up but wanted to make the tool available in the meantime.
 
 ## Scope
 
@@ -15,7 +20,6 @@ The package also includes a function to split large RIS files into smaller chunk
 ## Installation
 
 ```r
-# private repo: needs a GitHub PAT with repo scope
 remotes::install_github("Mark-Eng/ristools")
 ```
 
@@ -58,9 +62,9 @@ write_ris(oa, "openalex.ris")
 
 Every column is named after the tag it was read under — `AU`, `TI`, `PY`, `KW` — and tags that conventionally mean the same thing are **not** combined. A file using both `KW` and `DE` gets a column for each; start and end pages stay in separate `SP` (or `BP`) and `EP` columns. A tag repeated within one record (two `AU` lines, several `KW` lines) becomes a vector under that one tag, joined with `" | "` in the dataframe.
 
-Nothing is invented and nothing is dropped, which is what makes the read → edit → write cycle safe.
+Nothing is invented and nothing is dropped, so the read → edit → write cycle is clean and transparent.
 
-The trade-off is that column names follow the input file rather than a fixed schema: authors arrive as `A1` in an Ovid export but `AU` in an EconLit one. So this suits working with one file, or several from the same platform. Combining files from different platforms means reconciling the tags yourself — `ris_tag_lookup()` tells you what each one conventionally holds.
+A trade-off is that column names follow the input file rather than a fixed schema: authors arrive as `A1` in an Ovid export but `AU` in an EconLit one. So this suits working with one file, or several coming from the same platform. Combining files from different platforms requires reconciling tags yourself — `ris_tag_lookup()` tells you what each one conventionally holds.
 
 Reading several files at once combines them and records the source of each record in a `filename` column:
 
@@ -73,18 +77,15 @@ df$filename
 # full paths instead, e.g. when the same file name occurs in several folders
 df <- read_ris(files, full_path = TRUE)
 ```
-
-There is no `label` column: the dataframe holds your data and nothing else. Record names are available from the list form, via `names(read_ris(f, return_df = FALSE))`.
-
 **Only RIS-form tags are recognised.** A tag has to be a capital followed by a capital or a digit, then two spaces and a hyphen. A line that does not match is treated as a continuation of the field above it, which is what makes wrapped keyword blocks parse correctly. Records must end with `ER`; a file without one is rejected rather than guessed at.
 
 ### The multi-value delimiter
 
 Depending on the source, bibliographic records may hold several values in one field (e.g., authors, keywords, or subject headings). Collapsing a record into one row of a dataframe means joining them, and the join has to be reversible to preserve all information when writing back to a RIS file.
 
-`" and "` is the conventional choice, but it occurs inside real values, so splitting on it corrupts them:
+`" and "` sometimes used as a delimiter between values when converting RIS files to dataframes, but the word `"and"` sometimes occurs inside real values (especially keywords/subject headings), so splitting on `"and"` when writing back to RIS has unintended consequences:
 
-| Value | Result of splitting with `" and "`  |
+| Value | Result of delimiting and splitting on `" and "` |
 |---|---|
 | `Jones and Partners, Mary B.` | becomes two authors |
 | `Journal of Economics and Statistics` | becomes two journals |
@@ -97,13 +98,12 @@ You may select a different delimiter with `delimiter`, e.g.,
 
 ### Fidelity details
 
-Small things that are easy to get wrong, and that this package gets right:
+Some small details to maximise fidelity when reading/writing RIS files:
 
 | | |
 |---|---|
 | Page ranges | `SP`/`BP` and `EP` stay in their own columns, so an abbreviated end page (`419`–`41`) cannot be reordered, and an end page with no start page is never mistaken for a start page. |
 | Titles | Trailing punctuation is kept, so a title ending `U.S.` or `D.C.` keeps its last character. |
-| Absent fields | A record without an abstract gets no abstract column, rather than an empty one. |
 | Tags with digits | `M3`, `Y2` and `U1` keep their case and their digits, on read and on write. |
 | Field order | Columns follow the order fields first appear; nothing is silently dropped or moved. |
 | Multi-value writes | A field holding several values becomes one line per value, repeating the tag. |
@@ -144,7 +144,7 @@ M3  - Article
 
 The tag is filled forward across those lines, so all six keywords land under `KW`. This is why the tag pattern requires the `"  - "` separator: with an optional separator, `E7 economies` matches as tag `E7` and the keyword loses its first word, while `EKC` matches entirely and disappears.
 
-### Splitting a large file
+## Splitting a large file
 
 Some reference management and review platforms cap the number of records they will accept per import. `split_ris_file()` breaks a large export into fixed-size chunks:
 
@@ -212,7 +212,7 @@ Five OpenAlex fields hold arrays of objects rather than single values. Each beco
 | `keywords` | `KW` |
 | `sustainable_development_goals` | `U3` |
 
-`topics` needs a decision the others do not. Every topic OpenAlex assigns carries a `subfield`, `field` and `domain` alongside it, and the two broad levels are rarely what you want in a reference. `topic_levels` defaults to `c("topic", "subfield")` and drops them. It has to be set here rather than afterwards: once the column is a string, nothing is left to say which level a name came from.
+Note that every topic assigned in OpenAlex includes `subfield`, `field` and `domain` values. To keep values to a manageable length within a single field, the broader categorisations are dropped and only `topic` and `subfield` are kept. This does destroy the hierarchical nature of the classifications. This is a trade-off made for simplicity, but future versions may handle this more intelligently.
 
 ### Differences from `openalexR::oa2df()`
 
@@ -252,7 +252,7 @@ What it cannot detect is a name OpenAlex already stores family-name first, which
 
 ### Columns with no RIS equivalent
 
-`oa2risdf()` returns everything it reads, so most of its 40 columns have no RIS tag. They are kept rather than dropped, because `write_ris()` is the single place that decides what reaches a file:
+`oa2risdf()` returns everything it reads, so most of its 40 columns have no RIS tag. They are kept so you can still inspect and work with them in a dataframe, but they will be simply dropped by `write_ris()` (which drops any column not labelled as a valid RIS tag):
 
 ```r
 write_ris(df, "openalex.ris")
@@ -273,7 +273,7 @@ write_ris(df, "openalex.ris", warn_dropped = FALSE)
 
 The columns are dropped either way — the argument only controls whether you are told. Selecting the columns you want first does the same job and leaves the warning available for the cases you did not expect.
 
-## What `write_ris()` will write
+## Using `write_ris()` 
 
 A column reaches the file if `tag_map` names it, or the dialect maps it (`author` → `AU`), or it is already one of `ris_valid_tags()`. Anything else is dropped, with one warning listing the columns one per line — `warn_dropped = FALSE` silences it without changing what is written.
 

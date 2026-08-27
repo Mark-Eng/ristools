@@ -1,3 +1,6 @@
+# ristools 1.0.0
+First public version, no feature updates.
+
 # ristools 0.4.0
 
 This release adds a path from OpenAlex into RIS, and tightens what
