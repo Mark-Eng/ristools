@@ -1,10 +1,10 @@
 Package: ristools
 Title: R package for working RIS files, prioritising simplicity and transparency
-Version: 1.0.0
+Version: 1.0.1
 Authors@R:
     person("Mark", "Engelbert", email = "mengelbert@3ieimpact.org",
            role = c("aut", "cre"))
-Description: Reads and writes RIS and BibTeX bibliographic files without the data loss that affects several existing implementations. A RIS file becomes a data frame whose columns are the file's own tags, so it can be inspected, edited and written back with nothing renamed, merged or reordered. Multiple values in a single field (authors, keywords, JEL descriptors, ISSNs) are joined with a delimiter that cannot occur in bibliographic text, making the conversion reversible. Also handles byte order marks, detects file encoding, and preserves trailing punctuation in titles and tags containing digits. OpenAlex works can be read from JSON into the same flat data frame and written out as RIS.
+Description: Reads and writes RIS files with minimal "interpretation". A RIS file becomes a data frame whose columns are the file's own tags, so it can be inspected, edited and written back with nothing renamed, merged or reordered. Multiple values in a single field (authors, keywords, JEL descriptors, ISSNs) are joined with a delimiter ( | ) that rarely appears in real data, making the conversion reversible. OpenAlex works can be read from JSON into the same flat data frame and written out as RIS.
 License: GPL-3
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

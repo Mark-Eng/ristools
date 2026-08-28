@@ -193,8 +193,7 @@ EP  - 975
 SN  - 1751-1577
 DO  - 10.1016/j.joi.2017.08.007
 LA  - en
-U1  - Citation
-U2  - Scientometrics and Bibliometrics Research
+U1  - Scientometrics and Bibliometrics Research
 U3  - SDGs: Quality education
 N1  - Cited by: 9999
 ER  -
@@ -204,11 +203,12 @@ ER  -
 
 Five OpenAlex fields hold arrays of objects rather than single values. Each becomes one column holding the `display_name` of every entry, joined with `" | "` — the same delimiter `write_ris()` splits on, so a five-author paper writes five `AU` lines with nothing further to do.
 
+Four of the five also map to a RIS tag (`concepts` is dropped because the values are identical to those in `keywords` for most records):
+
 | OpenAlex field | RIS tag |
 |---|---|
 | `authorships` | `AU` |
-| `concepts` | `U1` |
-| `topics` | `U2` |
+| `topics` | `U1` |
 | `keywords` | `KW` |
 | `sustainable_development_goals` | `U3` |
 

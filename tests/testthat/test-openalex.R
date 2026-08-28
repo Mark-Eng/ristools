@@ -371,7 +371,15 @@ test_that("OpenAlex JSON survives oa2risdf -> write_ris -> read_ris", {
     "Aria, Massimo | van der Berg, Ludo | Cuccurullo, Corrado"
   )
   expect_equal(back$KW[1], "Science Mapping | Bibliometrics")
-  expect_equal(back$U1[1], "Citation | Computer science")
+  expect_equal(
+    back$U1[1],
+    paste(
+      "Scientometrics and Bibliometrics Research",
+      "Library and Information Sciences",
+      "Data Analysis with R",
+      sep = " | "
+    )
+  )
   expect_equal(back$N1[1], "Cited by: 9999")
   expect_equal(back$SP[1], "959")
   expect_equal(back$EP[1], "975")

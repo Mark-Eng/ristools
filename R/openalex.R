@@ -17,7 +17,6 @@
 #  Where the two differ it is noted in the roxygen for oa2risdf().
 # ============================================================================
 
-
 # ----------------------------------------------------------------------------
 #  Reaching into parsed JSON
 #
@@ -255,8 +254,13 @@ oa_check_works <- function(recs) {
     stop("'data' does not contain OpenAlex records", call. = FALSE)
   }
   work_fields <- c(
-    "authorships", "publication_year", "publication_date", "biblio",
-    "primary_location", "referenced_works", "abstract_inverted_index"
+    "authorships",
+    "publication_year",
+    "publication_date",
+    "biblio",
+    "primary_location",
+    "referenced_works",
+    "abstract_inverted_index"
   )
   if (!any(work_fields %in% names(first))) {
     stop(
@@ -273,15 +277,45 @@ oa_check_works <- function(recs) {
 # the columns oa2risdf() produces, in order
 oa_columns <- function(abstract = TRUE) {
   cols <- c(
-    "id", "title", "display_name", "authorships", "abstract", "doi",
-    "publication_date", "publication_year", "relevance_score", "fwci",
-    "cited_by_count", "type", "is_oa", "is_oa_anywhere", "oa_status",
-    "oa_url", "any_repository_has_fulltext", "source_display_name",
-    "source_id", "issn_l", "host_organization", "host_organization_name",
-    "landing_page_url", "pdf_url", "license", "version", "referenced_works",
-    "referenced_works_count", "related_works", "concepts", "topics",
-    "keywords", "is_paratext", "is_retracted", "language",
-    "sustainable_development_goals", "first_page", "last_page", "volume",
+    "id",
+    "title",
+    "display_name",
+    "authorships",
+    "abstract",
+    "doi",
+    "publication_date",
+    "publication_year",
+    "relevance_score",
+    "fwci",
+    "cited_by_count",
+    "type",
+    "is_oa",
+    "is_oa_anywhere",
+    "oa_status",
+    "oa_url",
+    "any_repository_has_fulltext",
+    "source_display_name",
+    "source_id",
+    "issn_l",
+    "host_organization",
+    "host_organization_name",
+    "landing_page_url",
+    "pdf_url",
+    "license",
+    "version",
+    "referenced_works",
+    "referenced_works_count",
+    "related_works",
+    "concepts",
+    "topics",
+    "keywords",
+    "is_paratext",
+    "is_retracted",
+    "language",
+    "sustainable_development_goals",
+    "first_page",
+    "last_page",
+    "volume",
     "issue"
   )
   if (!abstract) {
@@ -531,18 +565,46 @@ oa2risdf <- function(
 oa_ris_tags <- function() {
   data.frame(
     oa = c(
-      "type", "id", "title", "authorships", "abstract", "doi",
-      "publication_date", "publication_year", "cited_by_count",
-      "source_display_name", "issn_l", "concepts", "keywords", "topics",
-      "sustainable_development_goals", "language", "first_page", "last_page",
-      "volume", "issue"
+      "type",
+      "id",
+      "title",
+      "authorships",
+      "abstract",
+      "doi",
+      "publication_date",
+      "publication_year",
+      "cited_by_count",
+      "source_display_name",
+      "issn_l",
+      "keywords",
+      "topics",
+      "sustainable_development_goals",
+      "language",
+      "first_page",
+      "last_page",
+      "volume",
+      "issue"
     ),
     ris = c(
-      "TY", "ID", "TI", "AU", "AB", "DO",
-      "DA", "PY", "N1",
-      "JO", "SN", "U1", "KW", "U2",
-      "U3", "LA", "SP", "EP",
-      "VL", "IS"
+      "TY",
+      "ID",
+      "TI",
+      "AU",
+      "AB",
+      "DO",
+      "DA",
+      "PY",
+      "N1",
+      "JO",
+      "SN",
+      "KW",
+      "U1",
+      "U3",
+      "LA",
+      "SP",
+      "EP",
+      "VL",
+      "IS"
     ),
     stringsAsFactors = FALSE
   )
@@ -659,9 +721,31 @@ oa_type_to_ris <- function(value) {
 # treating "della" as part of the surname.
 oa_name_particles <- function() {
   c(
-    "van", "von", "der", "den", "de", "del", "della", "di", "da", "dos",
-    "das", "du", "la", "le", "ter", "ten", "af", "av", "bin", "ibn", "al",
-    "el", "zu", "zur", "'t"
+    "van",
+    "von",
+    "der",
+    "den",
+    "de",
+    "del",
+    "della",
+    "di",
+    "da",
+    "dos",
+    "das",
+    "du",
+    "la",
+    "le",
+    "ter",
+    "ten",
+    "af",
+    "av",
+    "bin",
+    "ibn",
+    "al",
+    "el",
+    "zu",
+    "zur",
+    "'t"
   )
 }
 
@@ -755,7 +839,11 @@ oa_add_prefix <- function(v, prefix, delimiter = ris_sep()) {
       if (!length(parts)) {
         return(NA_character_)
       }
-      labelled <- ifelse(startsWith(parts, prefix), parts, paste0(prefix, parts))
+      labelled <- ifelse(
+        startsWith(parts, prefix),
+        parts,
+        paste0(prefix, parts)
+      )
       paste(labelled, collapse = delimiter)
     },
     character(1),

@@ -1,3 +1,6 @@
+# ristools 1.0.1
+The OpenAlex "concepts" column is still parsed into a delimiter-separated value, but is no longer mapped to a ris tag. Concepts are largely deprecated by OpenAlex and for most records the data in the "concepts" column is exactly the same as in "keywords".
+
 # ristools 1.0.0
 First public version, no feature updates.
 
