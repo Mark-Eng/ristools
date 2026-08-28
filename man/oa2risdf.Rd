@@ -6,7 +6,7 @@
 \usage{
 oa2risdf(
   data,
-  ris_tags = FALSE,
+  col_names = c("keep", "ris", "asysd"),
   abstract = TRUE,
   topic_levels = c("topic", "subfield"),
   invert_authors = TRUE,
@@ -19,8 +19,18 @@ oa2risdf(
 of such responses, from a paged fetch; a single work record; a path to a
 \code{.json} file holding any of those; or a JSON string.}
 
-\item{ris_tags}{If \code{TRUE}, the result is passed through \code{\link[=oa2ristags]{oa2ristags()}}, so
-columns come back named with RIS tags. Defaults to \code{FALSE}.}
+\item{col_names}{How to name the result's columns. One of:
+\itemize{
+\item \code{"keep"} (the default): the \code{\link[=oa2risdf]{oa2risdf()}} names described below.
+\item \code{"ris"}: passed through \code{\link[=apply_ris_tags]{apply_ris_tags()}}, so columns come back named
+with RIS tags.
+\item \code{"asysd"}: renamed to the column names
+\href{https://github.com/camaradesuk/ASySD}{asysd} expects: \code{id} becomes
+\code{openalex_id}, \code{authorships} becomes \code{author}, \code{publication_year}
+becomes \code{year}, \code{source_display_name} becomes \code{journal}, \code{issue}
+becomes \code{number}, and \code{issn_l} becomes \code{isbn}. Every other column keeps
+its \code{oa2risdf()} name.
+}}
 
 \item{abstract}{If \code{TRUE} (the default), abstracts are rebuilt from
 \code{abstract_inverted_index}. If \code{FALSE}, no \code{abstract} column is created.}
@@ -30,8 +40,8 @@ columns come back named with RIS tags. Defaults to \code{FALSE}.}
 Defaults to \code{c("topic", "subfield")}, dropping the broad field and domain
 rows. See details.}
 
-\item{invert_authors}{Passed to \code{\link[=oa2ristags]{oa2ristags()}}; only has an effect when
-\code{ris_tags = TRUE}.}
+\item{invert_authors}{Passed to \code{\link[=apply_ris_tags]{apply_ris_tags()}}; only has an effect when
+\code{col_names = "ris"}.}
 
 \item{delimiter}{The string used to join multiple values in one field.
 Defaults to \code{\link[=ris_sep]{ris_sep()}}.}
@@ -56,7 +66,7 @@ Authors keep authorship order and are not de-duplicated. The other four are
 de-duplicated and keep the order OpenAlex returns, which is by descending
 score.
 
-\code{topic_levels} has to be applied here rather than in \code{\link[=oa2ristags]{oa2ristags()}}. Each
+\code{topic_levels} has to be applied here rather than in \code{\link[=apply_ris_tags]{apply_ris_tags()}}. Each
 topic OpenAlex assigns carries a \code{subfield}, \code{field} and \code{domain} alongside
 it, and once the column is collapsed to a string there is nothing left to
 say which level a name came from. The default keeps the two specific levels
@@ -94,10 +104,10 @@ df$authorships
 df$keywords
 
 # straight to RIS tags
-oa2risdf(works, ris_tags = TRUE)[, c("TY", "ID", "AU")]
+oa2risdf(works, col_names = "ris")[, c("TY", "ID", "AU")]
 
 }
 \seealso{
-\code{\link[=oa2ristags]{oa2ristags()}} to rename the columns to RIS tags, \code{\link[=write_ris]{write_ris()}} to
-write the result out, \code{\link[=ris_valid_tags]{ris_valid_tags()}} for what survives that write.
+\code{\link[=apply_ris_tags]{apply_ris_tags()}} to rename the columns to RIS tags, \code{\link[=write_ris]{write_ris()}}
+to write the result out, \code{\link[=ris_valid_tags]{ris_valid_tags()}} for what survives that write.
 }

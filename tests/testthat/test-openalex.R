@@ -16,11 +16,11 @@ oa_fixture <- function() {
 }
 
 
-# Record 4 has a work type oa_ris_types() does not cover, so every ris_tags
-# conversion of this fixture warns. That warning has its own test; everywhere
-# else it is noise.
+# Record 4 has a work type oa_ris_types() does not cover, so every
+# col_names = "ris" conversion of this fixture warns. That warning has its
+# own test; everywhere else it is noise.
 oa_ris_fixture <- function(...) {
-  suppressWarnings(oa2risdf(oa_fixture(), ris_tags = TRUE, ...))
+  suppressWarnings(oa2risdf(oa_fixture(), col_names = "ris", ...))
 }
 
 
@@ -201,7 +201,28 @@ test_that("a string that is neither a file nor JSON is refused", {
 })
 
 
-# ----------------------------------------------------------- oa2ristags() --
+# --------------------------------------------------------- col_names = "asysd" --
+
+test_that("col_names = 'asysd' renames the six asysd columns and keeps the rest", {
+  kept <- oa2risdf(oa_fixture())
+  asysd <- oa2risdf(oa_fixture(), col_names = "asysd")
+
+  expect_equal(asysd$openalex_id, kept$id)
+  expect_equal(asysd$author, kept$authorships)
+  expect_equal(asysd$year, kept$publication_year)
+  expect_equal(asysd$journal, kept$source_display_name)
+  expect_equal(asysd$number, kept$issue)
+  expect_equal(asysd$isbn, kept$issn_l)
+
+  # unmapped columns keep their oa2risdf() name
+  expect_equal(asysd$title, kept$title)
+  expect_false(any(c("id", "authorships", "publication_year",
+                      "source_display_name", "issue", "issn_l") %in%
+                      colnames(asysd)))
+})
+
+
+# --------------------------------------------------------- apply_ris_tags() --
 
 test_that("columns are renamed to the tags in oa_ris_tags()", {
   out <- oa_ris_fixture()
@@ -211,9 +232,9 @@ test_that("columns are renamed to the tags in oa_ris_tags()", {
   expect_false(any(m$oa %in% colnames(out)))
 })
 
-test_that("the ris_tags argument and the standalone function agree", {
+test_that("the col_names argument and the standalone function agree", {
   # one implementation, two entry points: this is what pins that
-  standalone <- function(...) suppressWarnings(oa2ristags(oa2risdf(oa_fixture()), ...))
+  standalone <- function(...) suppressWarnings(apply_ris_tags(oa2risdf(oa_fixture()), ...))
 
   expect_identical(oa_ris_fixture(), standalone())
   expect_identical(
@@ -242,9 +263,9 @@ test_that("N1 and U3 are prefixed once per value", {
   expect_true(is.na(out$U3[2]))
 })
 
-test_that("running oa2ristags twice does not double a prefix", {
+test_that("running apply_ris_tags twice does not double a prefix", {
   once <- oa_ris_fixture()
-  expect_message(twice <- oa2ristags(once), "already named with RIS tags")
+  expect_message(twice <- apply_ris_tags(once), "already named with RIS tags")
 
   expect_identical(once, twice)
   expect_false(any(grepl("Cited by: Cited by:", twice$N1, fixed = TRUE)))
@@ -253,21 +274,60 @@ test_that("running oa2ristags twice does not double a prefix", {
 test_that("a frame with no recognised columns warns and is returned intact", {
   df <- data.frame(alpha = 1, beta = 2)
 
-  expect_warning(out <- oa2ristags(df), "no OpenAlex columns recognised")
+  expect_warning(out <- apply_ris_tags(df), "no OpenAlex columns recognised")
   expect_identical(out, df)
 })
 
 test_that("unmapped columns are kept for write_ris to drop", {
   out <- oa_ris_fixture()
 
-  # oa2ristags() renames; write_ris() is the single place that decides what
-  # reaches a file
+  # apply_ris_tags() renames; write_ris() is the single place that decides
+  # what reaches a file
   expect_true("fwci" %in% colnames(out))
   expect_true("referenced_works" %in% colnames(out))
 })
 
-test_that("oa2ristags refuses anything that is not a data frame", {
-  expect_error(oa2ristags(1:10), "data.frame")
+test_that("apply_ris_tags refuses anything that is not a data frame", {
+  expect_error(apply_ris_tags(1:10), "data.frame")
+})
+
+test_that("asysd column names are recognised alongside the oa2risdf() names", {
+  asysd <- oa2risdf(oa_fixture(), col_names = "asysd")
+  out <- suppressWarnings(apply_ris_tags(asysd))
+  ris <- oa_ris_fixture()
+
+  expect_equal(out$ID, ris$ID)
+  expect_equal(out$AU, ris$AU)
+  expect_equal(out$PY, ris$PY)
+  expect_equal(out$JO, ris$JO)
+  expect_equal(out$IS, ris$IS)
+  expect_equal(out$SN, ris$SN)
+})
+
+test_that("two columns mapping to the same tag is refused, naming both and the tag", {
+  df <- data.frame(
+    authorships = "Massimo Aria",
+    author = "Massimo Aria",
+    title = "A study",
+    stringsAsFactors = FALSE
+  )
+
+  expect_error(apply_ris_tags(df), "\"authorships\" and \"author\".*\"AU\"")
+  expect_error(apply_ris_tags(df), "rename the other to something else")
+})
+
+test_that("multiple conflicts are all named in one error", {
+  df <- data.frame(
+    id = "W1",
+    openalex_id = "W1",
+    issue = "4",
+    number = "4",
+    stringsAsFactors = FALSE
+  )
+
+  err <- tryCatch(apply_ris_tags(df), error = conditionMessage)
+  expect_match(err, "\"ID\"")
+  expect_match(err, "\"IS\"")
 })
 
 
@@ -284,13 +344,13 @@ test_that("OpenAlex work types become RIS reference types", {
 test_that("an unknown or missing type becomes GEN, with a warning", {
   # deliberately not oa_ris_fixture(): the warning is the subject here
   expect_warning(
-    out <- oa2risdf(oa_fixture(), ris_tags = TRUE),
+    out <- oa2risdf(oa_fixture(), col_names = "ris"),
     "video-essay"
   )
   expect_equal(out$TY[4], "GEN")
 
   df <- data.frame(type = NA_character_, title = "x", stringsAsFactors = FALSE)
-  expect_warning(out2 <- oa2ristags(df), "<missing>")
+  expect_warning(out2 <- apply_ris_tags(df), "<missing>")
   # a record with no TY has no opening tag, and readers find records by it
   expect_equal(out2$TY, "GEN")
 })

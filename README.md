@@ -54,7 +54,7 @@ tags[tags$ris == "M3", ]
 split_ris_file("huge_export.ris", "chunks/", set_size = 10000)
 
 # OpenAlex works -> dataframe with RIS tags for column names -> .ris
-oa <- oa2risdf("openalex_search.json", ris_tags = TRUE)
+oa <- oa2risdf("openalex_search.json", col_names = "ris")
 write_ris(oa, "openalex.ris")
 ```
 
@@ -165,12 +165,12 @@ Splitting works at the text level, not by parsing. Records are delimited by line
 
 ## OpenAlex
 
-`oa2risdf()` reads OpenAlex works into a dataframe with no nested columns, and `oa2ristags()` renames those columns to RIS tags, so a search result can go straight to a `.ris` file:
+`oa2risdf()` reads OpenAlex works into a dataframe with no nested columns, and `apply_ris_tags()` renames those columns to RIS tags, so a search result can go straight to a `.ris` file:
 
 ```r
 # a saved API response, a list from openalexR::oa_request(), a JSON string,
 # or a single work — all accepted
-df <- oa2risdf("openalex_search.json", ris_tags = TRUE)
+df <- oa2risdf("openalex_search.json", col_names = "ris")
 write_ris(df, "openalex.ris")
 ```
 
@@ -198,6 +198,29 @@ U3  - SDGs: Quality education
 N1  - Cited by: 9999
 ER  -
 ```
+
+### `col_names`: `"keep"`, `"ris"`, or `"asysd"`
+
+`oa2risdf()`'s `col_names` argument controls what the result's columns are named:
+
+| `col_names` | Columns named |
+|---|---|
+| `"keep"` (default) | the `oa2risdf()` names below |
+| `"ris"` | RIS tags, via `apply_ris_tags()` |
+| `"asysd"` | the names [asysd](https://github.com/camaradesuk/ASySD) expects |
+
+`col_names = "asysd"` renames six columns and leaves the rest untouched:
+
+| `oa2risdf()` name | asysd name |
+|---|---|
+| `id` | `openalex_id` |
+| `authorships` | `author` |
+| `publication_year` | `year` |
+| `source_display_name` | `journal` |
+| `issue` | `number` |
+| `issn_l` | `isbn` |
+
+`apply_ris_tags()` recognises either name for these six columns, so a dataframe produced with `col_names = "asysd"` can still be passed to it directly.
 
 ### Nested fields become delimited strings
 
@@ -231,16 +254,18 @@ Column names are the same, so most code transfers. What differs:
 
 ### Values that change on the way to RIS
 
-`oa2ristags()` rewrites values where a RIS tag means something narrower than the OpenAlex field:
+`apply_ris_tags()` rewrites values where a RIS tag means something narrower than the OpenAlex field:
 
 | Column | Tag | Change |
 |---|---|---|
 | `type` | `TY` | recoded to a RIS reference type (`article` → `JOUR`, `book-chapter` → `CHAP`, …) |
-| `id` | `ID` | `https://openalex.org/` stripped |
+| `id` / `openalex_id` | `ID` | `https://openalex.org/` stripped |
 | `doi` | `DO` | `https://doi.org/` stripped |
 | `cited_by_count` | `N1` | prefixed `"Cited by: "` |
 | `sustainable_development_goals` | `U3` | prefixed `"SDGs: "` |
-| `authorships` | `AU` | `"Massimo Aria"` → `"Aria, Massimo"` |
+| `authorships` / `author` | `AU` | `"Massimo Aria"` → `"Aria, Massimo"` |
+
+If a dataframe has two columns mapping to the same tag — `authorships` and `author` both present, say — `apply_ris_tags()` refuses to guess and errors, naming both columns and the tag.
 
 A prefix labels *each* value, not the field as a whole, because `write_ris()` writes one line per value: a paper tagged with two SDGs gets two `U3` lines, each beginning `SDGs: `.
 
@@ -307,7 +332,7 @@ Because the drop happens before any value is read, a list column — which `as.c
 | `split_ris_file()` | split a large RIS file into chunks |
 | `ris_valid_tags()` | the tags `write_ris()` will write |
 | `oa2risdf()` | OpenAlex works (JSON, list, or file) &rarr; dataframe |
-| `oa2ristags()` | OpenAlex column names &rarr; RIS tags |
+| `apply_ris_tags()` | OpenAlex column names &rarr; RIS tags |
 | `oa_ris_tags()` | the OpenAlex column &rarr; RIS tag mapping |
 | `oa_ris_types()` | the OpenAlex type &rarr; RIS `TY` mapping |
 

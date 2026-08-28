@@ -1,3 +1,15 @@
+# ristools 1.1.0
+
+* The **`oa2risdf()` `ris_tags` argument (TRUE/FALSE) has been replaced by `col_names`.** `col_names
+  = "keep"` (the default) leaves column names untouches. `col_names = "ris"` converts select column names to RIS tags (equivalent to the old `ris_tags = TRUE`). A new `col_names = "asysd"` renames six columns to the names expected by the deduplication package [ASySD](https://github.com/camaradesuk/ASySD):
+  - `authorships` becomes `author`
+  - `publication_year` becomes `year`
+  - `source_display_name` becomes `journal`
+  - `issue` becomes `number`
+  - `issn_l` becomes `isbn`
+
+* **`oa2ristags()` has been renamed `apply_ris_tags()`.** It now recognises the six ASySD column names above alongside the OpenAlex column names they replace. So a data frame produced with `col_names = "asysd"` can be passed directly to ASySD. If two columns map to the same RIS tag (e.g., `authorships` and `author` are both present), the function generates an error highlighting the conflict and instructing the user to rename one of the columns.
+
 # ristools 1.0.1
 The OpenAlex "concepts" column is still parsed into a delimiter-separated value, but is no longer mapped to a ris tag. Concepts are largely deprecated by OpenAlex and for most records the data in the "concepts" column is exactly the same as in "keywords".
 

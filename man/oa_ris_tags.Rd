@@ -11,11 +11,12 @@ A data frame with one row per mapped column and two columns: \code{oa}
 (the \code{\link[=oa2risdf]{oa2risdf()}} column name) and \code{ris} (the RIS tag it becomes).
 }
 \description{
-The column-name mapping \code{\link[=oa2ristags]{oa2ristags()}} applies, as a table.
+The column-name mapping \code{\link[=apply_ris_tags]{apply_ris_tags()}} applies, as a table.
 }
 \details{
-Rows are in the order \code{\link[=oa2ristags]{oa2ristags()}} puts the columns in. Any \code{\link[=oa2risdf]{oa2risdf()}}
-column not listed here keeps its OpenAlex name, and is therefore dropped by
+Rows are in the order \code{\link[=apply_ris_tags]{apply_ris_tags()}} puts the columns in. Any
+\code{\link[=oa2risdf]{oa2risdf()}} column not listed here keeps its OpenAlex name, and is
+therefore dropped by
 \code{\link[=write_ris]{write_ris()}} with a warning.
 
 Some of these mappings change the value as well as the name, because the RIS

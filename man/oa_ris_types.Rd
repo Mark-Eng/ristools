@@ -12,7 +12,7 @@ A data frame with one row per OpenAlex work type and two columns:
 type it becomes).
 }
 \description{
-The \code{TY} recode \code{\link[=oa2ristags]{oa2ristags()}} applies, as a table.
+The \code{TY} recode \code{\link[=apply_ris_tags]{apply_ris_tags()}} applies, as a table.
 }
 \details{
 \code{TY} is the one RIS tag with a closed vocabulary, so an OpenAlex \code{type} of

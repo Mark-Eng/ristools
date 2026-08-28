@@ -1,6 +1,6 @@
 Package: ristools
 Title: R package for working RIS files, prioritising simplicity and transparency
-Version: 1.0.1
+Version: 1.1.0
 Authors@R:
     person("Mark", "Engelbert", email = "mengelbert@3ieimpact.org",
            role = c("aut", "cre"))

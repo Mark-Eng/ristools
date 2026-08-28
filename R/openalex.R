@@ -325,6 +325,48 @@ oa_columns <- function(abstract = TRUE) {
 }
 
 
+# ----------------------------------------------------------------------------
+#  OpenAlex -> asysd column names
+#
+#  asysd (https://github.com/camaradesuk/ASySD) expects a narrower, differently
+#  named set of columns. This is a pure rename, kept separate from the RIS tag
+#  mapping below: apply_ris_tags() still has to recognise these names, so both
+#  live off the same table of RIS aliases.
+# ----------------------------------------------------------------------------
+
+# oa2risdf() column -> asysd column, for the columns asysd renames
+oa_asysd_map <- function() {
+  c(
+    id = "openalex_id",
+    authorships = "author",
+    publication_year = "year",
+    source_display_name = "journal",
+    issue = "number",
+    issn_l = "isbn"
+  )
+}
+
+
+oa_asysd_rename <- function(df) {
+  m <- oa_asysd_map()
+  present <- intersect(names(m), colnames(df))
+  colnames(df)[match(present, colnames(df))] <- unname(m[present])
+  df
+}
+
+
+# dispatch table for oa2risdf()'s col_names argument, shared by the empty-
+# result early return and the normal path
+oa_apply_col_names <- function(df, col_names, invert_authors, delimiter) {
+  switch(
+    col_names,
+    keep = df,
+    ris = apply_ris_tags(df, invert_authors = invert_authors, delimiter = delimiter),
+    asysd = oa_asysd_rename(df)
+  )
+}
+
+
 #' Read OpenAlex works into a data frame
 #'
 #' Converts OpenAlex work records into a data frame with one row per work and
@@ -335,16 +377,24 @@ oa_columns <- function(abstract = TRUE) {
 #'   FALSE)`); a whole API response, with its `meta`/`results` envelope; a list
 #'   of such responses, from a paged fetch; a single work record; a path to a
 #'   `.json` file holding any of those; or a JSON string.
-#' @param ris_tags If `TRUE`, the result is passed through [oa2ristags()], so
-#'   columns come back named with RIS tags. Defaults to `FALSE`.
+#' @param col_names How to name the result's columns. One of:
+#'   * `"keep"` (the default): the [oa2risdf()] names described below.
+#'   * `"ris"`: passed through [apply_ris_tags()], so columns come back named
+#'     with RIS tags.
+#'   * `"asysd"`: renamed to the column names
+#'     [asysd](https://github.com/camaradesuk/ASySD) expects: `id` becomes
+#'     `openalex_id`, `authorships` becomes `author`, `publication_year`
+#'     becomes `year`, `source_display_name` becomes `journal`, `issue`
+#'     becomes `number`, and `issn_l` becomes `isbn`. Every other column keeps
+#'     its `oa2risdf()` name.
 #' @param abstract If `TRUE` (the default), abstracts are rebuilt from
 #'   `abstract_inverted_index`. If `FALSE`, no `abstract` column is created.
 #' @param topic_levels Which levels of the `topics` field to keep: any of
 #'   `"topic"`, `"subfield"`, `"field"`, `"domain"`, or `NULL` for all four.
 #'   Defaults to `c("topic", "subfield")`, dropping the broad field and domain
 #'   rows. See details.
-#' @param invert_authors Passed to [oa2ristags()]; only has an effect when
-#'   `ris_tags = TRUE`.
+#' @param invert_authors Passed to [apply_ris_tags()]; only has an effect when
+#'   `col_names = "ris"`.
 #' @param delimiter The string used to join multiple values in one field.
 #'   Defaults to [ris_sep()].
 #'
@@ -363,7 +413,7 @@ oa_columns <- function(abstract = TRUE) {
 #' de-duplicated and keep the order OpenAlex returns, which is by descending
 #' score.
 #'
-#' `topic_levels` has to be applied here rather than in [oa2ristags()]. Each
+#' `topic_levels` has to be applied here rather than in [apply_ris_tags()]. Each
 #' topic OpenAlex assigns carries a `subfield`, `field` and `domain` alongside
 #' it, and once the column is collapsed to a string there is nothing left to
 #' say which level a name came from. The default keeps the two specific levels
@@ -398,21 +448,22 @@ oa_columns <- function(abstract = TRUE) {
 #' df$keywords
 #'
 #' # straight to RIS tags
-#' oa2risdf(works, ris_tags = TRUE)[, c("TY", "ID", "AU")]
+#' oa2risdf(works, col_names = "ris")[, c("TY", "ID", "AU")]
 #'
-#' @seealso [oa2ristags()] to rename the columns to RIS tags, [write_ris()] to
-#'   write the result out, [ris_valid_tags()] for what survives that write.
+#' @seealso [apply_ris_tags()] to rename the columns to RIS tags, [write_ris()]
+#'   to write the result out, [ris_valid_tags()] for what survives that write.
 #'
 #' @importFrom jsonlite fromJSON
 #' @export
 oa2risdf <- function(
   data,
-  ris_tags = FALSE,
+  col_names = c("keep", "ris", "asysd"),
   abstract = TRUE,
   topic_levels = c("topic", "subfield"),
   invert_authors = TRUE,
   delimiter = ris_sep()
 ) {
+  col_names <- match.arg(col_names)
   if (is.null(topic_levels)) {
     topic_levels <- oa_topic_levels()
   }
@@ -427,9 +478,7 @@ oa2risdf <- function(
       stats::setNames(rep(list(character(0)), length(cols)), cols),
       stringsAsFactors = FALSE
     )
-    return(
-      if (ris_tags) oa2ristags(empty, invert_authors, delimiter) else empty
-    )
+    return(oa_apply_col_names(empty, col_names, invert_authors, delimiter))
   }
 
   # the sub-objects several columns are read out of
@@ -521,10 +570,7 @@ oa2risdf <- function(
   df <- data.frame(out[cols], stringsAsFactors = FALSE)
   rownames(df) <- NULL
 
-  if (ris_tags) {
-    df <- oa2ristags(df, invert_authors = invert_authors, delimiter = delimiter)
-  }
-  df
+  oa_apply_col_names(df, col_names, invert_authors, delimiter)
 }
 
 
@@ -534,14 +580,15 @@ oa2risdf <- function(
 
 #' How OpenAlex columns map to RIS tags
 #'
-#' The column-name mapping [oa2ristags()] applies, as a table.
+#' The column-name mapping [apply_ris_tags()] applies, as a table.
 #'
 #' @return A data frame with one row per mapped column and two columns: `oa`
 #'   (the [oa2risdf()] column name) and `ris` (the RIS tag it becomes).
 #'
 #' @details
-#' Rows are in the order [oa2ristags()] puts the columns in. Any [oa2risdf()]
-#' column not listed here keeps its OpenAlex name, and is therefore dropped by
+#' Rows are in the order [apply_ris_tags()] puts the columns in. Any
+#' [oa2risdf()] column not listed here keeps its OpenAlex name, and is
+#' therefore dropped by
 #' [write_ris()] with a warning.
 #'
 #' Some of these mappings change the value as well as the name, because the RIS
@@ -613,7 +660,7 @@ oa_ris_tags <- function() {
 
 #' How OpenAlex work types map to RIS reference types
 #'
-#' The `TY` recode [oa2ristags()] applies, as a table.
+#' The `TY` recode [apply_ris_tags()] applies, as a table.
 #'
 #' @return A data frame with one row per OpenAlex work type and two columns:
 #'   `openalex` (the `type` value, lower case) and `ris` (the RIS reference
@@ -711,7 +758,7 @@ oa_type_to_ris <- function(value) {
 #
 #  OpenAlex reports an author's display_name given-name first ("Massimo Aria").
 #  RIS consumers read AU as "Family, Given". The inversion cannot be done
-#  reliably -- see the roxygen for oa2ristags() -- so every rule here is
+#  reliably -- see the roxygen for apply_ris_tags() -- so every rule here is
 #  deliberately conservative, and the whole step can be switched off.
 # ----------------------------------------------------------------------------
 
@@ -825,7 +872,7 @@ oa_invert_author_field <- function(v, delimiter) {
 # labelled once would put "SDGs: Quality education" on the first line and leave
 # the second line unlabelled. Every line that reaches the file says what it is.
 #
-# The prefix is added only where it is absent, so oa2ristags() run twice cannot
+# The prefix is added only where it is absent, so apply_ris_tags() run twice cannot
 # produce "Cited by: Cited by: 42".
 oa_add_prefix <- function(v, prefix, delimiter = ris_sep()) {
   vapply(
@@ -860,13 +907,30 @@ oa_strip_prefix <- function(v, prefix) {
 }
 
 
+# oa_ris_tags(), extended with the asysd column names that reach the same RIS
+# tag by an alternate name (e.g. "author" alongside "authorships" -> "AU")
+oa_ris_tag_aliases <- function() {
+  m <- oa_ris_tags()
+  asysd <- oa_asysd_map()
+  asysd <- asysd[names(asysd) %in% m$oa]
+  extra <- data.frame(
+    oa = unname(asysd),
+    ris = m$ris[match(names(asysd), m$oa)],
+    stringsAsFactors = FALSE
+  )
+  rbind(m, extra)
+}
+
+
 #' Rename OpenAlex columns to RIS tags
 #'
 #' Converts the column names - and, where a RIS tag means something narrower
 #' than the OpenAlex field, the values - of an [oa2risdf()] data frame into RIS
 #' form, ready for [write_ris()].
 #'
-#' @param x A data frame with [oa2risdf()]-style column names.
+#' @param x A data frame with [oa2risdf()]-style column names, in either the
+#'   default (`col_names = "keep"`) or `col_names = "asysd"` form - see
+#'   details.
 #' @param invert_authors If `TRUE` (the default), author names are rewritten
 #'   from `"Massimo Aria"` to `"Aria, Massimo"`, the form RIS consumers expect.
 #'   See details for what this cannot get right.
@@ -879,16 +943,25 @@ oa_strip_prefix <- function(v, prefix) {
 #'   and follow.
 #'
 #' @details
-#' The name mapping is [oa_ris_tags()]. Unmapped columns are deliberately kept
+#' The name mapping is [oa_ris_tags()], extended with the alternate names
+#' [oa2risdf()]'s `col_names = "asysd"` produces: `openalex_id` is recognised
+#' alongside `id`, and so on for `authorships`/`author`,
+#' `publication_year`/`year`, `source_display_name`/`journal`,
+#' `issue`/`number` and `issn_l`/`isbn`. Unmapped columns are deliberately kept
 #' rather than dropped, so that [write_ris()] is the single place that decides
 #' what reaches a file - it drops them there, naming them in a warning.
+#'
+#' If `x` has two columns that map to the same RIS tag - `authorships` and its
+#' asysd alias `author`, say, both present at once - that is refused with an
+#' error naming both columns and the tag, rather than silently keeping one of
+#' them.
 #'
 #' Five mappings change the value too:
 #'
 #' | Column | Tag | Change |
 #' |---|---|---|
 #' | `type` | `TY` | recoded to a RIS reference type; see [oa_ris_types()] |
-#' | `id` | `ID` | `https://openalex.org/` stripped, leaving `W2755950973` |
+#' | `id` / `openalex_id` | `ID` | `https://openalex.org/` stripped, leaving `W2755950973` |
 #' | `doi` | `DO` | `https://doi.org/` stripped, leaving the bare DOI |
 #' | `cited_by_count` | `N1` | prefixed `"Cited by: "` |
 #' | `sustainable_development_goals` | `U3` | prefixed `"SDGs: "` |
@@ -934,7 +1007,7 @@ oa_strip_prefix <- function(v, prefix) {
 #'   stringsAsFactors = FALSE
 #' )
 #'
-#' out <- oa2ristags(df)
+#' out <- apply_ris_tags(df)
 #' colnames(out)
 #' out$AU
 #' out$TY
@@ -943,64 +1016,100 @@ oa_strip_prefix <- function(v, prefix) {
 #' # fwci has no RIS tag, so it survives here and is dropped by write_ris()
 #' "fwci" %in% colnames(out)
 #'
-#' @seealso [oa2risdf()], which calls this when `ris_tags = TRUE`;
+#' @seealso [oa2risdf()], which calls this when `col_names = "ris"`;
 #'   [oa_ris_tags()] and [oa_ris_types()] for the two mapping tables.
 #'
 #' @export
-oa2ristags <- function(x, invert_authors = TRUE, delimiter = ris_sep()) {
+apply_ris_tags <- function(x, invert_authors = TRUE, delimiter = ris_sep()) {
   if (!inherits(x, "data.frame")) {
-    stop("oa2ristags can only be called on objects of class 'data.frame'")
+    stop("apply_ris_tags can only be called on objects of class 'data.frame'")
   }
-  m <- oa_ris_tags()
+  m <- oa_ris_tag_aliases()
   present <- intersect(m$oa, colnames(x))
 
   if (!length(present)) {
     if (any(colnames(x) %in% m$ris)) {
       message(
-        "oa2ristags(): these columns are already named with RIS tags; ",
+        "apply_ris_tags(): these columns are already named with RIS tags; ",
         "returning unchanged."
       )
     } else {
       warning(
-        "oa2ristags(): no OpenAlex columns recognised; returning unchanged.",
+        "apply_ris_tags(): no OpenAlex columns recognised; returning unchanged.",
         call. = FALSE
       )
     }
     return(x)
   }
 
+  # a column and its asysd alias (e.g. "authorships" and "author") can both be
+  # present and target the same tag; that has to be refused, not resolved
+  present_ris <- m$ris[match(present, m$oa)]
+  conflicts <- unique(present_ris[duplicated(present_ris)])
+  if (length(conflicts)) {
+    stop(
+      paste(
+        vapply(
+          conflicts,
+          function(tag) {
+            cols <- present[present_ris == tag]
+            paste0(
+              "\"", paste(cols, collapse = "\" and \""),
+              "\" both map to RIS tag \"", tag, "\""
+            )
+          },
+          character(1)
+        ),
+        collapse = "; "
+      ),
+      ". Choose which of the columns you would like to be included in the ",
+      "RIS file, and rename the other to something else.",
+      call. = FALSE
+    )
+  }
+
+  # the present column - canonical or asysd alias - that maps to the same tag
+  # as `canonical`
+  col_for <- function(canonical) {
+    tag <- m$ris[m$oa == canonical][1]
+    present[present_ris == tag]
+  }
+
   # values first, while the columns still have names that say what they hold
-  if ("type" %in% present) {
-    x[["type"]] <- oa_type_to_ris(x[["type"]])
+  type_col <- col_for("type")
+  if (length(type_col)) {
+    x[[type_col]] <- oa_type_to_ris(x[[type_col]])
   }
-  if ("id" %in% present) {
-    x[["id"]] <- oa_strip_prefix(x[["id"]], "https://openalex.org/")
+  id_col <- col_for("id")
+  if (length(id_col)) {
+    x[[id_col]] <- oa_strip_prefix(x[[id_col]], "https://openalex.org/")
   }
-  if ("doi" %in% present) {
-    x[["doi"]] <- oa_strip_prefix(x[["doi"]], "https://doi.org/")
+  doi_col <- col_for("doi")
+  if (length(doi_col)) {
+    x[[doi_col]] <- oa_strip_prefix(x[[doi_col]], "https://doi.org/")
   }
-  if ("cited_by_count" %in% present) {
-    x[["cited_by_count"]] <- oa_add_prefix(
-      x[["cited_by_count"]],
-      "Cited by: ",
-      delimiter
-    )
+  cited_col <- col_for("cited_by_count")
+  if (length(cited_col)) {
+    x[[cited_col]] <- oa_add_prefix(x[[cited_col]], "Cited by: ", delimiter)
   }
-  if ("sustainable_development_goals" %in% present) {
-    x[["sustainable_development_goals"]] <- oa_add_prefix(
-      x[["sustainable_development_goals"]],
-      "SDGs: ",
-      delimiter
-    )
+  sdg_col <- col_for("sustainable_development_goals")
+  if (length(sdg_col)) {
+    x[[sdg_col]] <- oa_add_prefix(x[[sdg_col]], "SDGs: ", delimiter)
   }
-  if (invert_authors && "authorships" %in% present) {
-    x[["authorships"]] <- oa_invert_author_field(x[["authorships"]], delimiter)
+  author_col <- col_for("authorships")
+  if (invert_authors && length(author_col)) {
+    x[[author_col]] <- oa_invert_author_field(x[[author_col]], delimiter)
   }
 
   # mapped columns first, in oa_ris_tags() order; the rest keep their place
   rest <- setdiff(colnames(x), present)
-  ordered <- m$oa[m$oa %in% present]
+  ris_order <- oa_ris_tags()$ris
+  ordered_tags <- ris_order[ris_order %in% present_ris]
+  ordered <- unlist(lapply(
+    ordered_tags,
+    function(tag) present[present_ris == tag]
+  ))
   x <- x[, c(ordered, rest), drop = FALSE]
-  colnames(x) <- c(m$ris[m$oa %in% present], rest)
+  colnames(x) <- c(ordered_tags, rest)
   x
 }
