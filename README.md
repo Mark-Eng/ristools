@@ -329,6 +329,7 @@ Because the drop happens before any value is read, a list column — which `as.c
 | `ris_sep()` | the multi-value delimiter, `" \| "` |
 | `ris_index()` | sequential record names, `ref_01`, `ref_02`, … |
 | `ris_tag_lookup()` | what each RIS tag conventionally means |
+| `condense_duplicate_cols()` | collapse same-named columns into one, keeping the left-most non-blank value |
 | `split_ris_file()` | split a large RIS file into chunks |
 | `ris_valid_tags()` | the tags `write_ris()` will write |
 | `oa2risdf()` | OpenAlex works (JSON, list, or file) &rarr; dataframe |

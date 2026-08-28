@@ -78,3 +78,59 @@ ris_index <- function(string, n, sep = "_") {
     sep = sep
   )
 }
+
+
+#' Condense duplicate-named columns into one
+#'
+#' Collapses a data frame that has more than one column under the same name —
+#' as happens when data frames from different sources are bound together by
+#' column — down to a single column per name.
+#'
+#' @param df A data frame, possibly with repeated column names.
+#'
+#' @return A data frame with one column per distinct name in `df`, in the
+#'   order those names first appear. A name that occurs only once keeps its
+#'   column unchanged.
+#'
+#' @details
+#' For each set of same-named columns, a row's value is taken from the
+#' left-most column that is not `NA`. If only one version of a row has a
+#' value, that value is kept; if both do, the left-most one wins and the
+#' other is discarded.
+#'
+#' `NA` is the only value treated as blank — an empty string `""` is a value
+#' and beats a later `NA`. This matches how the rest of ristools represents a
+#' missing field (see [ris_to_df()]), but means a source that writes blanks as
+#' `""` rather than `NA` should have those recoded first.
+#'
+#' This is unrelated to the internal `merge_ris_columns()` used by
+#' [read_ris()] on a multi-file read, which stacks data frames that have
+#' *different* columns into one, filling gaps with `NA` — it never has to
+#' choose between two versions of the same field.
+#'
+#' @examples
+#' left <- data.frame(TY = c("JOUR", NA), TI = c("A study", "Another study"))
+#' right <- data.frame(TY = c(NA, "BOOK"), AB = c("An abstract", NA))
+#' combined <- cbind(left, right)
+#' colnames(combined)
+#' condense_duplicate_cols(combined)
+#'
+#' @export
+condense_duplicate_cols <- function(df) {
+  if (!inherits(df, "data.frame")) {
+    stop("condense_duplicate_cols can only be called on objects of class 'data.frame'")
+  }
+
+  nm <- colnames(df)
+  cols <- unique(nm)
+
+  out <- lapply(cols, function(n) {
+    dup <- as.list(df[, which(nm == n), drop = FALSE])
+    Reduce(function(a, b) ifelse(is.na(a), b, a), dup)
+  })
+  names(out) <- cols
+
+  df_out <- data.frame(out, stringsAsFactors = FALSE, check.names = FALSE)
+  rownames(df_out) <- NULL
+  df_out
+}

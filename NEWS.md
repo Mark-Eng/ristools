@@ -1,3 +1,7 @@
+# ristools 1.1.1
+
+* A `condense_duplicate_cols()` function has been added. Depending on your workflow, you may end up combining ris dataframes from different sources in a way that creates multiple versions of ris-tag columns. These need to be resolved before writing to a ris file. Running `condense_duplicate_cols()` on a dataframe will keep one version of each column. If one column has data and the other doesn't, the non-NA value will be kept. If both have data, the left-most value is preserved and the other will be discarded.
+
 # ristools 1.1.0
 
 * The **`oa2risdf()` `ris_tags` argument (TRUE/FALSE) has been replaced by `col_names`.** `col_names
