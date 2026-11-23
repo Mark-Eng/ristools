@@ -127,6 +127,73 @@ test_that("a file with no ER terminator is rejected, not guessed at", {
   expect_error(read_ris(f), "no 'ER' record terminator")
 })
 
+# a record whose ER falls past line 200, as in Ovid PsycINFO exports with long
+# AI and M2 fields
+long_first_record <- function() {
+  c(
+    "TY  - JOUR",
+    "T1  - A long record",
+    paste0("AI  - Affiliation ", 1:250),
+    "ER  - ",
+    "TY  - JOUR",
+    "T1  - A short record",
+    "ER  - "
+  )
+}
+
+test_that("a first record longer than 200 lines is rejected by default", {
+  f <- write_temp_ris(long_first_record())
+  on.exit(unlink(f))
+
+  expect_error(read_ris(f), "first 200 lines.*long.file = TRUE")
+})
+
+test_that("long.file = TRUE reads a first record longer than 200 lines", {
+  f <- write_temp_ris(long_first_record())
+  on.exit(unlink(f))
+
+  df <- read_ris(f, long.file = TRUE)
+
+  expect_equal(nrow(df), 2)
+  expect_equal(df$T1, c("A long record", "A short record"))
+  expect_length(strsplit(df$AI[1], ris_sep(), fixed = TRUE)[[1]], 250)
+})
+
+test_that("long.file = TRUE applies to every file in a multi-file read", {
+  f1 <- write_temp_ris(long_first_record())
+  f2 <- write_temp_ris(long_first_record())
+  on.exit(unlink(c(f1, f2)))
+
+  expect_error(read_ris(c(f1, f2)), "first 200 lines")
+  expect_equal(nrow(read_ris(c(f1, f2), long.file = TRUE)), 4)
+})
+
+test_that("long.file = TRUE still rejects a file with no ER anywhere", {
+  f <- write_temp_ris(c("TY  - JOUR", "T1  - No terminator", ""))
+  on.exit(unlink(f))
+
+  expect_error(
+    read_ris(f, long.file = TRUE),
+    "no 'ER' record terminator found anywhere"
+  )
+})
+
+test_that("the long.file hint is only given when the file has more lines", {
+  f <- write_temp_ris(c("TY  - JOUR", "T1  - No terminator", ""))
+  on.exit(unlink(f))
+
+  err <- tryCatch(read_ris(f), error = conditionMessage)
+  expect_no_match(err, "long.file")
+})
+
+test_that("long.file must be TRUE or FALSE", {
+  f <- write_temp_ris(long_first_record())
+  on.exit(unlink(f))
+
+  expect_error(read_ris(f, long.file = "TRUE"), "long.file must be TRUE or FALSE")
+  expect_error(read_ris(f, long.file = NA), "long.file must be TRUE or FALSE")
+})
+
 test_that("blank-line delimited records are rejected", {
   # revtools treated a blank line as a record separator. That fallback was
   # untested and is gone; such a file must now say so rather than misparse.

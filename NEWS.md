@@ -1,3 +1,7 @@
+# ristools 1.1.2
+
+* `read_ris()` has a new `long.file` argument. By default, a RIS file must have an `ER` record terminator within its first 200 lines, which a file whose first record is very long (e.g. Ovid PsycINFO exports with long `AI` or `M2` fields) can fail. `long.file = TRUE` searches the whole file instead. A file with no `ER` anywhere is still rejected, and the default error now suggests `long.file = TRUE` when the file is longer than 200 lines.
+
 # ristools 1.1.1
 
 * A `condense_duplicate_cols()` function has been added. Depending on your workflow, you may end up combining ris dataframes from different sources in a way that creates multiple versions of ris-tag columns. These need to be resolved before writing to a ris file. Running `condense_duplicate_cols()` on a dataframe will keep one version of each column. If one column has data and the other doesn't, the non-NA value will be kept. If both have data, the left-most value is preserved and the other will be discarded.

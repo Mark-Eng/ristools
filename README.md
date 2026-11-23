@@ -163,6 +163,16 @@ Chunks are named after the input file with the record range appended. Any parent
 
 Splitting works at the text level, not by parsing. Records are delimited by lines starting TY  -  and ER  -, and every line between them is copied verbatim. No field is read, mapped, or rewritten, so splitting cannot alter or lose data even in a file read_ris() would struggle with. The function stops rather than guessing if the file has no TY  -  lines, or if the TY/ER counts disagree — the latter usually means a truncated download or a record missing its terminator.
 
+## Very long records (Ovid PsycINFO)
+
+`read_ris()` checks for an `ER` record terminator in the first 200 lines and stops if it finds none, rather than misparsing something that isn't RIS. Some exports — notably PsycINFO via Ovid, with long `AI` and `M2` fields — can have a first record longer than that. Set `long.file = TRUE` to search the whole file instead. To slim such a file down, drop the columns you don't need and write it back:
+
+```r
+df <- read_ris("psycinfo.ris", long.file = TRUE)
+df <- df[, !names(df) %in% c("A2", "AI", "M1", "M2")]
+write_ris(df, "psycinfo_slim.ris")
+```
+
 ## OpenAlex
 
 `oa2risdf()` reads OpenAlex works into a dataframe with no nested columns, and `apply_ris_tags()` renames those columns to RIS tags, so a search result can go straight to a `.ris` file:

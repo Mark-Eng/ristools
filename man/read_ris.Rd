@@ -4,7 +4,13 @@
 \alias{read_ris}
 \title{Read a RIS or BibTeX file}
 \usage{
-read_ris(filename, return_df = TRUE, delimiter = ris_sep(), full_path = FALSE)
+read_ris(
+  filename,
+  return_df = TRUE,
+  delimiter = ris_sep(),
+  full_path = FALSE,
+  long.file = FALSE
+)
 }
 \arguments{
 \item{filename}{Path to a file, or a character vector of paths. Multiple
@@ -22,6 +28,12 @@ element per record, each a named list of fields.}
 \code{filename} column holds the bare file name; if \code{TRUE}, the path as passed
 to \code{filename}. Reading files of the same name from more than one directory
 produces duplicate bare names, which is warned about — use \code{TRUE} there.}
+
+\item{long.file}{If \code{FALSE} (the default), a RIS file must have an \code{ER}
+record terminator within its first 200 lines. If \code{TRUE}, the whole file is
+searched instead. Use this for exports whose first record runs past 200
+lines, such as Ovid PsycINFO files with long \code{AI} or \code{M2} fields. A file with
+no \code{ER} anywhere is still rejected.}
 }
 \value{
 A data frame with one column per RIS tag found in the input, or a
@@ -50,7 +62,8 @@ A RIS tag is two characters, a capital followed by a capital or a digit, then
 two spaces and a hyphen. A line not matching that is treated as a
 continuation of the field above it, which is what makes wrapped keyword
 blocks parse correctly. Records must be terminated by \code{ER}; a file without
-one is rejected rather than guessed at. Web of Science (\code{.ciw}) and PubMed
+one in its first 200 lines (or anywhere, with \code{long.file = TRUE}) is rejected
+rather than guessed at. Web of Science (\code{.ciw}) and PubMed
 (\code{.nbib}) exports tag their lines differently and are not supported.
 
 BibTeX is detected by content rather than extension: a file with more \verb{\{}

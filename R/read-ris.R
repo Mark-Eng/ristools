@@ -26,6 +26,11 @@
 #'   `filename` column holds the bare file name; if `TRUE`, the path as passed
 #'   to `filename`. Reading files of the same name from more than one directory
 #'   produces duplicate bare names, which is warned about — use `TRUE` there.
+#' @param long.file If `FALSE` (the default), a RIS file must have an `ER`
+#'   record terminator within its first 200 lines. If `TRUE`, the whole file is
+#'   searched instead. Use this for exports whose first record runs past 200
+#'   lines, such as Ovid PsycINFO files with long `AI` or `M2` fields. A file with
+#'   no `ER` anywhere is still rejected.
 #'
 #' @return A data frame with one column per RIS tag found in the input, or a
 #'   `ris_records` list if `return_df = FALSE`.
@@ -49,7 +54,8 @@
 #' two spaces and a hyphen. A line not matching that is treated as a
 #' continuation of the field above it, which is what makes wrapped keyword
 #' blocks parse correctly. Records must be terminated by `ER`; a file without
-#' one is rejected rather than guessed at. Web of Science (`.ciw`) and PubMed
+#' one in its first 200 lines (or anywhere, with `long.file = TRUE`) is rejected
+#' rather than guessed at. Web of Science (`.ciw`) and PubMed
 #' (`.nbib`) exports tag their lines differently and are not supported.
 #'
 #' BibTeX is detected by content rather than extension: a file with more `{`
@@ -87,13 +93,17 @@ read_ris <- function(
   filename,
   return_df = TRUE,
   delimiter = ris_sep(),
-  full_path = FALSE
+  full_path = FALSE,
+  long.file = FALSE
 ) {
   invisible(Sys.setlocale("LC_ALL", "C"))
   on.exit(invisible(Sys.setlocale("LC_ALL", "")))
 
   if (missing(filename)) {
     stop("filename is missing with no default")
+  }
+  if (!is.logical(long.file) || length(long.file) != 1 || is.na(long.file)) {
+    stop("long.file must be TRUE or FALSE")
   }
   file_check <- unlist(lapply(filename, file.exists))
   if (any(!file_check)) {
@@ -103,11 +113,12 @@ read_ris <- function(
   if (length(filename) > 1) {
     result_list <- lapply(
       filename,
-      function(a, df, sep) {
-        read_ris_internal(a, df, sep)
+      function(a, df, sep, long) {
+        read_ris_internal(a, df, sep, long)
       },
       df = return_df,
-      sep = delimiter
+      sep = delimiter,
+      long = long.file
     )
     names(result_list) <- ris_source_names(filename, full_path)
     if (return_df) {
@@ -132,7 +143,7 @@ read_ris <- function(
       return(result)
     }
   } else {
-    return(read_ris_internal(filename, return_df, delimiter))
+    return(read_ris_internal(filename, return_df, delimiter, long.file))
   }
 }
 
@@ -165,7 +176,8 @@ ris_source_names <- function(filename, full_path) {
 read_ris_internal <- function(
   filename,
   return_df = TRUE,
-  delimiter = ris_sep()
+  delimiter = ris_sep(),
+  long.file = FALSE
 ) {
   z <- tryCatch(
     {
@@ -216,7 +228,11 @@ read_ris_internal <- function(
   if (n_brackets > n_dashes) {
     result <- read_bib(z, delimiter)
   } else {
-    require_endrow(zsub)
+    if (long.file) {
+      require_endrow(z, long_file = TRUE)
+    } else {
+      require_endrow(zsub, total_lines = length(z))
+    }
     result <- parse_ris_raw(prep_ris(z))
   }
 
@@ -297,13 +313,27 @@ merge_ris_columns <- function(x, y) {
 # (length(a > 6) is the line's character count, not a repeat count), so a file
 # reaching them was parsed into something arbitrary rather than rejected. An
 # explicit error beats a silent misparse.
-require_endrow <- function(x) {
+#
+# Normally only the first 200 lines are checked. A file whose first record is
+# longer than that (Ovid PsycINFO, with long AI and M2 fields) would then fail,
+# so read_ris(long.file = TRUE) passes the whole file instead. `total_lines` is
+# the length of the full file, used to suggest long.file when it could help.
+require_endrow <- function(x, long_file = FALSE, total_lines = length(x)) {
   if (!any(grepl("^ER", x))) {
+    where <- if (long_file) "anywhere in the file" else
+      paste0("in the first ", length(x), " lines")
+    hint <- if (!long_file && total_lines > length(x)) {
+      paste0(
+        " If this is a RIS file whose first record is longer than ",
+        length(x), " lines, try read_ris(..., long.file = TRUE)."
+      )
+    } else {
+      ""
+    }
     stop(
-      "no 'ER' record terminator found in the first ",
-      length(x),
-      " lines: is this a RIS file? Web of Science (.ciw), PubMed (.nbib) and ",
-      "blank-line-delimited formats are not supported.",
+      "no 'ER' record terminator found ", where,
+      ": is this a RIS file? Web of Science (.ciw), PubMed (.nbib) and ",
+      "blank-line-delimited formats are not supported.", hint,
       call. = FALSE
     )
   }
