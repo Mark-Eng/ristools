@@ -233,7 +233,7 @@ read_ris_internal <- function(
     } else {
       require_endrow(zsub, total_lines = length(z))
     }
-    result <- parse_ris_raw(prep_ris(z))
+    result <- parse_ris_raw(prep_ris(z, filename))
   }
 
   if (return_df) {
@@ -374,8 +374,9 @@ ris_tag_pattern <- function() {
 
 
 # split raw RIS lines into a data frame of tag / text / row, filling tags
-# forward across continuation lines
-prep_ris <- function(z) {
+# forward across continuation lines. `filename` is only used to report line
+# numbers when the record boundaries don't pair up.
+prep_ris <- function(z, filename = NULL) {
   # detect tags
   tags <- regexpr(ris_tag_pattern(), perl = TRUE, z)
   z_dframe <- data.frame(
@@ -439,10 +440,15 @@ prep_ris <- function(z) {
   }
   start_tag <- names(which.max(xtabs(~start_tags)))
 
-  row_df <- data.frame(
-    start = which(z_dframe$ris == start_tag),
-    end = which(z_dframe$ris == "ER")
+  start_idx <- which(z_dframe$ris == start_tag)
+  end_idx <- which(z_dframe$ris == "ER")
+  check_record_bounds(
+    z_dframe$row_order[start_idx],
+    z_dframe$row_order[end_idx],
+    start_tag,
+    filename = filename
   )
+  row_df <- data.frame(start = start_idx, end = end_idx)
   z_list <- apply(
     row_df,
     1,
@@ -493,6 +499,136 @@ prep_ris <- function(z) {
   )
 
   return(z_dframe)
+}
+
+
+# Every record must run from its opening tag (usually TY) to an ER, with no
+# overlap. Before this check a mismatch surfaced as "arguments imply differing
+# number of rows: 162, 163" from data.frame(), which says nothing about where
+# in a 50,000-line export the bad record is. Equal counts in the wrong order
+# (TY TY ER ER) are caught too: they used to build reversed or overlapping
+# line ranges and silently produce garbage records.
+#
+# `start_lines` and `end_lines` are positions in the vector scan() returned;
+# walking them in order, a start that meets another start before an ER is
+# unclosed, and an ER with no open start is orphaned. At most `max_report` of
+# them are listed, as line numbers in `filename` (see ris_line_numbers()).
+check_record_bounds <- function(start_lines, end_lines, start_tag,
+                                filename = NULL, max_report = 10) {
+  # fast path for a well-formed file: S1 < E1 < S2 < E2 < ...
+  n <- length(start_lines)
+  if (n == length(end_lines) && n > 0 &&
+      all(start_lines < end_lines) &&
+      all(end_lines[-n] < start_lines[-1])) {
+    return(invisible(TRUE))
+  }
+
+  pos <- c(start_lines, end_lines)
+  is_start <- c(rep(TRUE, n), rep(FALSE, length(end_lines)))
+  ord <- order(pos)
+  pos <- pos[ord]
+  is_start <- is_start[ord]
+
+  # bad_pos: the offending line; next_pos: for an unclosed start, the start
+  # that interrupted it (NA otherwise)
+  bad_pos <- integer(0)
+  next_pos <- integer(0)
+  open <- NA_integer_
+  for (i in seq_along(pos)) {
+    if (is_start[i]) {
+      if (!is.na(open)) {
+        bad_pos <- c(bad_pos, open)
+        next_pos <- c(next_pos, pos[i])
+      }
+      open <- pos[i]
+    } else {
+      if (is.na(open)) {
+        bad_pos <- c(bad_pos, pos[i])
+        next_pos <- c(next_pos, NA_integer_)
+      }
+      open <- NA_integer_
+    }
+  }
+  if (!is.na(open)) {
+    bad_pos <- c(bad_pos, open)
+    next_pos <- c(next_pos, NA_integer_)
+  }
+
+  if (length(bad_pos) == 0) {
+    return(invisible(TRUE))
+  }
+
+  n_bad <- length(bad_pos)
+  shown <- seq_len(min(n_bad, max_report))
+  line_map <- ris_line_numbers(filename, max(pos))
+  bad_line <- line_map[bad_pos[shown]]
+  next_line <- line_map[next_pos[shown]]
+  bad_is_start <- is_start[match(bad_pos[shown], pos)]
+  bad_msg <- ifelse(
+    !bad_is_start,
+    paste0("'ER' has no '", start_tag, "' opening its record"),
+    ifelse(
+      is.na(next_line),
+      paste0("'", start_tag, "' has no 'ER' before the end of the file"),
+      paste0(
+        "'", start_tag, "' has no 'ER' before the next '", start_tag,
+        "' (line ", next_line, ")"
+      )
+    )
+  )
+  bad_line <- format(bad_line)
+  in_file <- if (is.null(filename)) "" else paste0(" in ", basename(filename))
+  header <- if (length(start_lines) != length(end_lines)) {
+    paste0(
+      "found ", length(start_lines), " '", start_tag, "' lines starting a ",
+      "record but ", length(end_lines), " 'ER' lines ending one", in_file, "."
+    )
+  } else {
+    paste0(
+      "'", start_tag, "' and 'ER' lines do not pair up into records",
+      in_file, "."
+    )
+  }
+  listing <- if (n_bad > max_report) {
+    paste0("Unmatched lines (first ", max_report, " of ", n_bad, "):")
+  } else {
+    "Unmatched lines:"
+  }
+  stop(
+    header, " ", listing, "\n",
+    paste0("  line ", bad_line, ": ", bad_msg, collapse = "\n"),
+    "\nEach record must open with '", start_tag, "  - ' and close with ",
+    "'ER  - '; add or remove the tag at these lines.",
+    call. = FALSE
+  )
+}
+
+
+# Map positions in the vector read_ris_internal() gets from scan() back to
+# line numbers in the file. scan() is called with sep = "\t", so a line
+# holding k tabs becomes k + 1 elements and positions drift from line numbers
+# after the first tab in an abstract. Only called when reporting an error, so
+# the second read costs nothing on a good file. Falls back to the positions
+# themselves if the file can't be re-read or the counts don't agree.
+ris_line_numbers <- function(filename, n) {
+  identity_map <- seq_len(n)
+  if (is.null(filename)) {
+    return(identity_map)
+  }
+  lines <- tryCatch(
+    readLines(filename, warn = FALSE, encoding = "bytes"),
+    error = function(e) NULL
+  )
+  if (is.null(lines)) {
+    return(identity_map)
+  }
+  n_tabs <- lengths(gregexpr("\t", lines, fixed = TRUE, useBytes = TRUE))
+  n_tabs[!grepl("\t", lines, fixed = TRUE, useBytes = TRUE)] <- 0L
+  line_map <- rep(seq_along(lines), n_tabs + 1L)
+  if (length(line_map) < n) {
+    return(identity_map)
+  }
+  line_map
 }
 
 

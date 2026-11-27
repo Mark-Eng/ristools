@@ -90,6 +90,57 @@ test_that("two tags that describe the same thing stay separate", {
   expect_equal(recs[[1]]$T3, "A Series Title")
 })
 
+test_that("a TY with no ER is reported with its line number", {
+  f <- write_temp_ris(missing_er_ris())
+  on.exit(unlink(f))
+
+  # line numbers are the file's own, despite the tab on line 2
+  err <- expect_error(read_ris(f), "found 3 'TY' lines .* but 2 'ER' lines")
+  expect_match(
+    conditionMessage(err),
+    "line 5: 'TY' has no 'ER' before the next 'TY' (line 8)",
+    fixed = TRUE
+  )
+  expect_match(conditionMessage(err), basename(f), fixed = TRUE)
+})
+
+test_that("an ER with no TY and a TY at end of file are both reported", {
+  f <- write_temp_ris(c(
+    tiny_ris_record("One"),        # lines 1-4
+    "ER  - ",                      # line 5: stray
+    "",
+    tiny_ris_record("Two"),        # lines 7-10
+    "TY  - JOUR",                  # line 11: never closed
+    "T1  - Last"
+  ))
+  on.exit(unlink(f))
+
+  # equal counts (3 TY, 3 ER) but they don't pair up: previously this built a
+  # reversed line range and returned garbage rather than failing
+  err <- expect_error(read_ris(f), "do not pair up")
+  msg <- conditionMessage(err)
+  expect_match(msg, "line  5: 'ER' has no 'TY' opening its record", fixed = TRUE)
+  expect_match(
+    msg, "line 11: 'TY' has no 'ER' before the end of the file", fixed = TRUE
+  )
+})
+
+test_that("only the first 10 unmatched lines are listed", {
+  # 15 records, each missing its ER
+  lines <- unlist(lapply(seq_len(15), function(i) {
+    c("TY  - JOUR", paste0("T1  - Rec ", i), "")
+  }))
+  f <- write_temp_ris(c(lines, "ER  - ", ""))
+  on.exit(unlink(f))
+
+  err <- expect_error(read_ris(f), "first 10 of 14")
+  listed <- regmatches(
+    conditionMessage(err),
+    gregexpr("line +[0-9]+:", conditionMessage(err))
+  )[[1]]
+  expect_length(listed, 10)
+})
+
 test_that("a missing file raises an error", {
   expect_error(read_ris(tempfile(fileext = ".ris")), "file not found")
 })

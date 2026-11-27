@@ -77,7 +77,7 @@ df$filename
 # full paths instead, e.g. when the same file name occurs in several folders
 df <- read_ris(files, full_path = TRUE)
 ```
-**Only RIS-form tags are recognised.** A tag has to be a capital followed by a capital or a digit, then two spaces and a hyphen. A line that does not match is treated as a continuation of the field above it, which is what makes wrapped keyword blocks parse correctly. Records must end with `ER`; a file without one is rejected rather than guessed at.
+**Only RIS-form tags are recognised.** A tag has to be a capital followed by a capital or a digit, then two spaces and a hyphen. A line that does not match is treated as a continuation of the field above it, which is what makes wrapped keyword blocks parse correctly. Records must end with `ER`; a file without one is rejected rather than guessed at. If some records lack their opening `TY` or closing `ER`, the error lists the line numbers of the first 10 unmatched lines so you can find and fix them.
 
 ### The multi-value delimiter
 

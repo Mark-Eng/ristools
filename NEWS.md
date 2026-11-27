@@ -1,3 +1,7 @@
+# ristools 1.1.3
+
+* When the `TY` and `ER` lines in a file don't pair up, `read_ris()` now says where. The error names the file and lists up to 10 unmatched lines by line number: a `TY` with no `ER` before the next `TY` (or before the end of the file), or an `ER` with no `TY` opening its record. Previously this failed with `arguments imply differing number of rows: n, m`. Files with equal `TY` and `ER` counts in the wrong order (e.g. one record missing its `ER` and another with an extra one) are now rejected too; before, they could be read into garbled records without any error.
+
 # ristools 1.1.2
 
 * `read_ris()` has a new `long.file` argument. By default, a RIS file must have an `ER` record terminator within its first 200 lines, which a file whose first record is very long (e.g. Ovid PsycINFO exports with long `AI` or `M2` fields) can fail. `long.file = TRUE` searches the whole file instead. A file with no `ER` anywhere is still rejected, and the default error now suggests `long.file = TRUE` when the file is longer than 200 lines.

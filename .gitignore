@@ -8,3 +8,4 @@
 *.Rcheck
 docs/
 tests/ebsco_tests
+Claude.md

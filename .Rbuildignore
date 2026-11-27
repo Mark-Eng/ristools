@@ -9,6 +9,7 @@
 ^docs$
 ^_pkgdown\.yml$
 ^tests/ebsco_tests$
+^Claude\.md$
 # Personal scratch scripts. R CMD check runs every tests/*.R file, so anything
 # there that hits the network, needs a package outside Imports/Suggests, or
 # writes outside the package would fail the check.

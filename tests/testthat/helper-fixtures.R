@@ -155,6 +155,31 @@ mixed_kw_de_ris <- function() {
   )
 }
 
+# a minimal well-formed record, for building files with broken boundaries
+tiny_ris_record <- function(title) {
+  c("TY  - JOUR", paste0("T1  - ", title), "ER  - ", "")
+}
+
+# three records where the second has lost its ER, so its TY (line 5) runs into
+# the next TY (line 8). The first record's abstract contains a tab, which
+# scan() splits into two elements: line numbers in the error must still be
+# the file's own, not shifted by one.
+missing_er_ris <- function() {
+  c(
+    "TY  - JOUR",
+    "AB  - before\tafter",
+    "ER  - ",
+    "",
+    "TY  - JOUR",
+    "T1  - No end",
+    "",
+    "TY  - JOUR",
+    "T1  - Third",
+    "ER  - ",
+    ""
+  )
+}
+
 # write lines to a temp .ris file and return the path
 write_temp_ris <- function(lines, ext = ".ris") {
   f <- tempfile(fileext = ext)
