@@ -118,7 +118,7 @@ Both of these made every EBSCO export either unreadable or silently corrupt unde
 Error in data.frame(...) : arguments imply differing number of rows: 162, 163
 ```
 
-`ristools` strips the BOM before anything else looks at the text.
+`ristools` strips the BOM before anything else looks at the text — from the start of every line, not just the first, since a file made by joining several exports carries one at the head of each.
 
 **Encoding is detected, not assumed.** Hardcoding `latin1` reinterprets every multi-byte character of a UTF-8 file byte by byte:
 

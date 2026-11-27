@@ -125,6 +125,31 @@ test_that("an ER with no TY and a TY at end of file are both reported", {
   )
 })
 
+test_that("a tie for start tag goes to TY, not the alphabetical winner", {
+  # one record opens with TY, the other has lost it and opens with AU. With
+  # the tie broken alphabetically, AU was elected and every AU line was
+  # reported as an unclosed record.
+  f <- write_temp_ris(c(
+    "TY  - JOUR",        # line 1
+    "AU  - Smith, J",
+    "ER  - ",
+    "",
+    "AU  - Jones, M",    # line 5: no TY
+    "AU  - Brown, K",
+    "ER  - ",            # line 7
+    ""
+  ))
+  on.exit(unlink(f))
+
+  err <- expect_error(read_ris(f), "found 1 'TY' lines")
+  expect_match(
+    conditionMessage(err),
+    "line 7: 'ER' has no 'TY' opening its record",
+    fixed = TRUE
+  )
+  expect_no_match(conditionMessage(err), "'AU' has no")
+})
+
 test_that("only the first 10 unmatched lines are listed", {
   # 15 records, each missing its ER
   lines <- unlist(lapply(seq_len(15), function(i) {

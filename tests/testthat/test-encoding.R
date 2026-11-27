@@ -63,6 +63,20 @@ test_that("a multi-record BOM file finds every record", {
   expect_equal(nrow(df), 5)
 })
 
+test_that("a BOM at the head of every record is stripped from each", {
+  # A file made by joining exports end to end carries each export's BOM. Only
+  # the first line used to be stripped, so the second record's TY sat behind
+  # a BOM, read as a continuation line, and the record opened with AU. The
+  # resulting TY/AU tie elected AU as the start tag and both records failed.
+  f <- write_bytes(paste0("﻿", utf8_record, "﻿", utf8_record))
+  on.exit(unlink(f))
+
+  df <- read_ris(f)
+  expect_equal(nrow(df), 2)
+  expect_equal(df$TY, c("JOUR", "JOUR"))
+  expect_false(any(grepl("﻿", unlist(df), fixed = TRUE)))
+})
+
 test_that("UTF-8 text is not mojibaked", {
   # Encoding() was hardcoded to "latin1", so every multi-byte character was
   # reinterpreted bytewise: a U+2010 hyphen became "a" and an

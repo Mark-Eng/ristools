@@ -204,13 +204,14 @@ read_ris_internal <- function(
     }
   )
 
-  # Strip a byte order mark, before Encoding() reinterprets its bytes as
-  # three latin1 characters and stops the first tag matching. Without this
-  # the opening record loses its tag, so prep_ris() sees one fewer record
-  # start than end. Affects every EBSCO export.
-  if (length(z) > 0) {
-    z[1] <- sub("^\xef\xbb\xbf", "", z[1], useBytes = TRUE)
-  }
+  # Strip byte order marks, before Encoding() reinterprets their bytes as
+  # three latin1 characters and stops the tag matching. Without this the
+  # record loses its opening tag, so prep_ris() sees one fewer record start
+  # than end. Affects every EBSCO export. Check every line, not just the
+  # first: a file made by joining several exports carries a BOM at the head
+  # of each one, and a "TY" behind a BOM is read as a continuation line, so
+  # that record opens with whatever tag comes next.
+  z <- sub("^\xef\xbb\xbf", "", z, useBytes = TRUE)
 
   # Mark the encoding rather than assuming latin1, which mojibakes every
   # non-ASCII character of a UTF-8 file ("socio-economic" with a U+2010
@@ -438,7 +439,14 @@ prep_ris <- function(z, filename = NULL) {
       call. = FALSE
     )
   }
-  start_tag <- names(which.max(xtabs(~start_tags)))
+  # On a tie, prefer TY (which the RIS spec puts first in every record) over
+  # the alphabetical winner xtabs() would give. With one TY-led record and
+  # one whose TY was hidden behind a stray BOM, "AU" used to win, every AU
+  # line became a record start, and the error pointed at those lines rather
+  # than the broken record.
+  start_counts <- xtabs(~start_tags)
+  start_winners <- names(start_counts)[start_counts == max(start_counts)]
+  start_tag <- if ("TY" %in% start_winners) "TY" else start_winners[1]
 
   start_idx <- which(z_dframe$ris == start_tag)
   end_idx <- which(z_dframe$ris == "ER")
